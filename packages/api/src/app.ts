@@ -12,6 +12,8 @@ import { projectRoutes } from "./modules/projects/project.routes";
 import { activityRoutes } from "./modules/activity/activity.routes";
 import { screenshotRoutes } from "./modules/screenshots/screenshot.routes";
 import { timesheetRoutes } from "./modules/timesheets/timesheet.routes";
+import { invoiceRoutes } from "./modules/invoices/invoice.routes";
+import { reportRoutes } from "./modules/reports/report.routes";
 
 export const app = express();
 
@@ -35,6 +37,8 @@ app.use("/projects", projectRoutes);
 app.use("/activity", activityRoutes);
 app.use("/screenshots", screenshotRoutes);
 app.use("/timesheets", timesheetRoutes);
+app.use("/invoices", invoiceRoutes);
+app.use("/reports", reportRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

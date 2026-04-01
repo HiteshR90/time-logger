@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@time-tracker/shared": "workspace:*",
-    "active-win": "^9.0.1",
+    "active-win": "^9.0.0",
     "better-sqlite3": "^11.7.0",
     "electron-store": "^10.0.0",
     "electron-updater": "^6.3.0",
