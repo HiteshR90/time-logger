@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  departments Department[]
+  clients     Client[]
+  projects    Project[]
+  invoices    Invoice[]
+
+  @@map("organizations")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  email        String
+  passwordHash String   @map("password_hash")
+  name         String
+  role         String   @default("employee")
+  departmentId String?  @map("department_id")
+  avatarUrl    String?  @map("avatar_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  department     Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  projectMembers ProjectMember[]
+  timeEntries    TimeEntry[]
+  invoiceLines   InvoiceLineItem[]
+
+  @@unique([orgId, email])
+  @@index([orgId])
+  @@map("users")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  users        User[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+  @@map("departments")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  name      String
+  email     String?
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  projects     Project[]
+  invoices     Invoice[]
+
+  @@index([orgId])
+  @@map("clients")
+}
+
+model Project {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  clientId     String?  @map("client_id")
+  name         String
+  description  String?
+  budgetType   String   @default("hourly") @map("budget_type")
+  budgetAmount Float?   @map("budget_amount")
+  currency     String   @default("USD")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client       Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  members      ProjectMember[]
+  timeEntries  TimeEntry[]
+  invoiceLines InvoiceLineItem[]
+
+  @@index([orgId])
+  @@index([clientId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId  String   @map("project_id")
+  userId     String   @map("user_id")
+  hourlyRate Float    @default(0) @map("hourly_rate")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@map("project_members")
+}
+
+model TimeEntry {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  projectId   String   @map("project_id")
+  startTime   DateTime @map("start_time")
+  endTime     DateTime? @map("end_time")
+  durationSec Int      @default(0) @map("duration_sec")
+  status      String   @default("active")
+  approval    String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  activitySnapshots  ActivitySnapshot[]
+  appUsageLogs       AppUsageLog[]
+  screenshots        Screenshot[]
+
+  @@index([userId, projectId, startTime])
+  @@index([userId, startTime])
+  @@index([projectId])
+  @@map("time_entries")
+}
+
+model ActivitySnapshot {
+  id              String   @id @default(uuid())
+  timeEntryId     String   @map("time_entry_id")
+  timestamp       DateTime
+  keystrokes      Int      @default(0)
+  mouseClicks     Int      @default(0) @map("mouse_clicks")
+  mouseDistancePx Int      @default(0) @map("mouse_distance_px")
+  activityLevel   Int      @default(0) @map("activity_level")
+
+  timeEntry TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  @@index([timeEntryId])
+  @@index([timestamp])
+  @@map("activity_snapshots")
+}
+
+model AppUsageLog {
+  id          String @id @default(uuid())
+  timeEntryId String @map("time_entry_id")
+  app         String
+  title       String @default("")
+  url         String?
+  durationSec Int    @default(0) @map("duration_sec")
+  category    String @default("neutral")
+
+  timeEntry TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  @@index([timeEntryId])
+  @@map("app_usage_logs")
+}
+
+model Screenshot {
+  id           String   @id @default(uuid())
+  timeEntryId  String   @map("time_entry_id")
+  s3Key        String   @map("s3_key")
+  thumbnailKey String?  @map("thumbnail_key")
+  timestamp    DateTime
+  blurred      Boolean  @default(false)
+
+  timeEntry TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+
+  @@index([timeEntryId])
+  @@index([timestamp])
+  @@map("screenshots")
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  orgId         String   @map("org_id")
+  clientId      String   @map("client_id")
+  invoiceNumber String   @map("invoice_number")
+  fromDate      DateTime @map("from_date")
+  toDate        DateTime @map("to_date")
+  subtotal      Float    @default(0)
+  taxRate       Float    @default(0) @map("tax_rate")
+  taxAmount     Float    @default(0) @map("tax_amount")
+  total         Float    @default(0)
+  status        String   @default("draft")
+  pdfS3Key      String?  @map("pdf_s3_key")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  organization Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client       Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lineItems    InvoiceLineItem[]
+
+  @@unique([orgId, invoiceNumber])
+  @@index([orgId])
+  @@index([clientId])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String @id @default(uuid())
+  invoiceId   String @map("invoice_id")
+  userId      String @map("user_id")
+  projectId   String @map("project_id")
+  description String @default("")
+  hours       Float  @default(0)
+  rate        Float  @default(0)
+  amount      Float  @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_line_items")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model InviteToken {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  email     String
+  name      String
+  role      String
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("invite_tokens")
+}
