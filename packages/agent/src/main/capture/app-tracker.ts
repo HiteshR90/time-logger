@@ -1,4 +1,4 @@
-import activeWin from "active-win";
+import { activeWindow } from "active-win";
 
 interface AppSession {
   app: string;
@@ -69,7 +69,7 @@ export function startAppTracking(intervalMs: number = 2000) {
 
   pollInterval = setInterval(async () => {
     try {
-      const win = await activeWin();
+      const win = await activeWindow();
       if (!win) return;
 
       const appName = win.owner.name;
