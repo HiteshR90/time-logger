@@ -37,27 +37,35 @@ cd "$ROOT_DIR/packages/web"
 npx next dev --port 3000 &
 WEB_PID=$!
 
+# 6. Start Electron agent
+echo "[…] Starting Electron agent"
+cd "$ROOT_DIR/packages/agent"
+npx electron-vite dev &
+AGENT_PID=$!
+
 echo ""
 echo "=== All services started ==="
 echo "  API:       http://localhost:5080"
 echo "  Dashboard: http://localhost:3000"
+echo "  Agent:     Electron window"
 echo "  Health:    http://localhost:5080/health"
 echo ""
 echo "  API PID:   $API_PID"
 echo "  Web PID:   $WEB_PID"
+echo "  Agent PID: $AGENT_PID"
 echo ""
 echo "Press Ctrl+C to stop all services."
 
-# Trap Ctrl+C to kill both
+# Trap Ctrl+C to kill all
 cleanup() {
   echo ""
   echo "Shutting down..."
-  kill $API_PID $WEB_PID 2>/dev/null
-  wait $API_PID $WEB_PID 2>/dev/null
+  kill $API_PID $WEB_PID $AGENT_PID 2>/dev/null
+  wait $API_PID $WEB_PID $AGENT_PID 2>/dev/null
   echo "Done."
   exit 0
 }
 trap cleanup SIGINT SIGTERM
 
-# Wait for both
+# Wait for all
 wait
