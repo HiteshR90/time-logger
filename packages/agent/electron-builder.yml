@@ -1,0 +1,22 @@
+appId: com.timetracker.agent
+productName: TimeTracker
+directories:
+  output: release
+files:
+  - dist/**/*
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+win:
+  target:
+    - nsis
+    - portable
+linux:
+  target:
+    - AppImage
+    - deb
+publish:
+  provider: generic
+  url: https://releases.timetracker.app

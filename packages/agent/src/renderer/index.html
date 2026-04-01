@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TimeTracker</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 20px; }
+      .container { max-width: 360px; margin: 0 auto; }
+      h1 { font-size: 20px; margin-bottom: 20px; text-align: center; }
+      .form-group { margin-bottom: 16px; }
+      label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
+      input, select { width: 100%; padding: 10px; border: 1px solid #334155; border-radius: 6px; background: #1e293b; color: #e2e8f0; font-size: 14px; }
+      button { width: 100%; padding: 12px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+      .btn-primary { background: #3b82f6; color: white; }
+      .btn-primary:hover { background: #2563eb; }
+      .btn-danger { background: #ef4444; color: white; }
+      .btn-danger:hover { background: #dc2626; }
+      .btn-secondary { background: #475569; color: white; }
+      .status { text-align: center; padding: 12px; border-radius: 6px; margin: 16px 0; font-size: 13px; }
+      .status.tracking { background: #166534; color: #86efac; }
+      .status.stopped { background: #1e293b; color: #94a3b8; }
+      .timer { font-size: 36px; font-weight: 700; text-align: center; margin: 20px 0; font-variant-numeric: tabular-nums; }
+      .error { color: #fca5a5; font-size: 13px; margin-top: 8px; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Login Screen -->
+      <div id="login-screen">
+        <h1>TimeTracker</h1>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="you@company.com" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="••••••••" />
+        </div>
+        <button class="btn-primary" id="login-btn">Sign In</button>
+        <div id="login-error" class="error hidden"></div>
+      </div>
+
+      <!-- Tracker Screen -->
+      <div id="tracker-screen" class="hidden">
+        <h1>TimeTracker</h1>
+        <div class="form-group">
+          <label>Project</label>
+          <select id="project-select">
+            <option value="">Select a project...</option>
+          </select>
+        </div>
+        <div class="timer" id="timer">00:00:00</div>
+        <div id="tracking-status" class="status stopped">Not tracking</div>
+        <button class="btn-primary" id="start-btn">Start Tracking</button>
+        <button class="btn-danger hidden" id="stop-btn">Stop Tracking</button>
+        <button class="btn-secondary" id="logout-btn" style="margin-top: 16px;">Logout</button>
+      </div>
+    </div>
+
+    <script>
+      const api = window.api;
+      let tracking = false;
+      let timerSeconds = 0;
+      let timerInterval = null;
+      let currentUser = null;
+
+      const $ = (id) => document.getElementById(id);
+
+      function updateTimer() {
+        const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((timerSeconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (timerSeconds % 60).toString().padStart(2, '0');
+        $('timer').textContent = `${h}:${m}:${s}`;
+      }
+
+      function showScreen(screen) {
+        $('login-screen').classList.toggle('hidden', screen !== 'login');
+        $('tracker-screen').classList.toggle('hidden', screen !== 'tracker');
+      }
+
+      async function loadProjects() {
+        const result = await api.listProjects();
+        if (result.success) {
+          const select = $('project-select');
+          select.innerHTML = '<option value="">Select a project...</option>';
+          result.projects.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            select.appendChild(opt);
+          });
+        }
+      }
+
+      $('login-btn').addEventListener('click', async () => {
+        const email = $('email').value;
+        const password = $('password').value;
+        const result = await api.login(email, password);
+        if (result.success) {
+          currentUser = result.user;
+          showScreen('tracker');
+          loadProjects();
+        } else {
+          $('login-error').textContent = result.error || 'Login failed';
+          $('login-error').classList.remove('hidden');
+        }
+      });
+
+      $('start-btn').addEventListener('click', async () => {
+        const projectId = $('project-select').value;
+        if (!projectId) return alert('Select a project first');
+        const result = await api.startTracking(currentUser.id, projectId);
+        if (result.success) {
+          tracking = true;
+          timerSeconds = 0;
+          timerInterval = setInterval(() => { timerSeconds++; updateTimer(); }, 1000);
+          $('start-btn').classList.add('hidden');
+          $('stop-btn').classList.remove('hidden');
+          $('tracking-status').className = 'status tracking';
+          $('tracking-status').textContent = 'Tracking...';
+        }
+      });
+
+      $('stop-btn').addEventListener('click', async () => {
+        await api.stopTracking();
+        tracking = false;
+        clearInterval(timerInterval);
+        $('start-btn').classList.remove('hidden');
+        $('stop-btn').classList.add('hidden');
+        $('tracking-status').className = 'status stopped';
+        $('tracking-status').textContent = 'Not tracking';
+      });
+
+      $('logout-btn').addEventListener('click', async () => {
+        if (tracking) await api.stopTracking();
+        await api.logout();
+        showScreen('login');
+      });
+
+      // Check if already logged in
+      api.checkAuth().then(result => {
+        if (result.loggedIn) {
+          showScreen('tracker');
+          loadProjects();
+        }
+      });
+    </script>
+  </body>
+</html>

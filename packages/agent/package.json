@@ -1,0 +1,30 @@
+{
+  "name": "@time-tracker/agent",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/main/main.ts",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "electron-builder",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@time-tracker/shared": "workspace:*",
+    "active-win": "^9.0.1",
+    "better-sqlite3": "^11.7.0",
+    "electron-store": "^10.0.0",
+    "electron-updater": "^6.3.0",
+    "screenshot-desktop": "^1.15.0",
+    "sharp": "^0.33.0",
+    "uiohook-napi": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0",
+    "electron-vite": "^3.0.0",
+    "typescript": "~5.4.5",
+    "vite": "^6.0.0"
+  }
+}
