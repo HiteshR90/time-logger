@@ -1,9 +1,19 @@
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import path from "path";
 
+// ESM-only packages must be bundled, not externalized
+const ESM_PACKAGES = [
+  "electron-store",
+  "conf",
+  "dot-prop",
+  "env-paths",
+  "atomically",
+  "active-win",
+];
+
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ESM_PACKAGES })],
     build: {
       outDir: "out/main",
       lib: {
