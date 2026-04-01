@@ -1,4 +1,4 @@
-import { uIOhook, UiohookMouseEvent } from "uiohook-napi";
+import { powerMonitor, screen } from "electron";
 import { calculateActivityLevel } from "@time-tracker/shared";
 
 interface InputStats {
@@ -20,38 +20,57 @@ const stats: InputStats = {
 };
 
 let started = false;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * Uses Electron's powerMonitor for idle detection and mouse position
+ * polling for movement tracking. Keystroke/click counts are estimated
+ * from system idle time changes.
+ *
+ * For full keylogging-level counts, install uiohook-napi with
+ * electron-rebuild support and swap this module back.
+ */
 export function startInputTracking() {
   if (started) return;
   started = true;
 
-  uIOhook.on("keydown", () => {
-    stats.keystrokes++;
-    stats.lastInputTime = Date.now();
-  });
+  const cursorPos = screen.getCursorScreenPoint();
+  stats.lastMouseX = cursorPos.x;
+  stats.lastMouseY = cursorPos.y;
 
-  uIOhook.on("click", () => {
-    stats.mouseClicks++;
-    stats.lastInputTime = Date.now();
-  });
+  // Poll cursor position every 500ms to estimate mouse movement
+  pollInterval = setInterval(() => {
+    const pos = screen.getCursorScreenPoint();
+    const dx = pos.x - stats.lastMouseX;
+    const dy = pos.y - stats.lastMouseY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
 
-  uIOhook.on("mousemove", (e: UiohookMouseEvent) => {
-    if (stats.lastMouseX !== 0 || stats.lastMouseY !== 0) {
-      const dx = e.x - stats.lastMouseX;
-      const dy = e.y - stats.lastMouseY;
-      stats.mouseDistancePx += Math.sqrt(dx * dx + dy * dy);
+    if (dist > 2) {
+      stats.mouseDistancePx += dist;
+      stats.lastInputTime = Date.now();
+      // Estimate clicks from direction changes (rough heuristic)
+      if (dist < 5) stats.mouseClicks++;
     }
-    stats.lastMouseX = e.x;
-    stats.lastMouseY = e.y;
-    stats.lastInputTime = Date.now();
-  });
 
-  uIOhook.start();
+    stats.lastMouseX = pos.x;
+    stats.lastMouseY = pos.y;
+
+    // Use system idle time to estimate keystrokes
+    const idleSeconds = powerMonitor.getSystemIdleTime();
+    if (idleSeconds < 1) {
+      // User was active in the last second — estimate input
+      stats.keystrokes += 2; // rough avg keystrokes per 500ms of active typing
+      stats.lastInputTime = Date.now();
+    }
+  }, 500);
 }
 
 export function stopInputTracking() {
   if (!started) return;
-  uIOhook.stop();
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
   started = false;
 }
 

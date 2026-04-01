@@ -1,8 +1,9 @@
-import { defineConfig } from "electron-vite";
+import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import path from "path";
 
 export default defineConfig({
   main: {
+    plugins: [externalizeDepsPlugin()],
     build: {
       outDir: "out/main",
       lib: {
@@ -11,6 +12,7 @@ export default defineConfig({
     },
   },
   preload: {
+    plugins: [externalizeDepsPlugin()],
     build: {
       outDir: "out/preload",
       lib: {
