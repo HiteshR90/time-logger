@@ -9,6 +9,9 @@ import { userRoutes } from "./modules/users/user.routes";
 import { departmentRoutes } from "./modules/departments/department.routes";
 import { clientRoutes } from "./modules/clients/client.routes";
 import { projectRoutes } from "./modules/projects/project.routes";
+import { activityRoutes } from "./modules/activity/activity.routes";
+import { screenshotRoutes } from "./modules/screenshots/screenshot.routes";
+import { timesheetRoutes } from "./modules/timesheets/timesheet.routes";
 
 export const app = express();
 
@@ -29,6 +32,9 @@ app.use("/users", userRoutes);
 app.use("/departments", departmentRoutes);
 app.use("/clients", clientRoutes);
 app.use("/projects", projectRoutes);
+app.use("/activity", activityRoutes);
+app.use("/screenshots", screenshotRoutes);
+app.use("/timesheets", timesheetRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

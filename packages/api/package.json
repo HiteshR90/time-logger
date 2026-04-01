@@ -15,6 +15,8 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1021.0",
+    "@aws-sdk/s3-request-presigner": "^3.1021.0",
     "@prisma/client": "^6.5.0",
     "@time-tracker/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
@@ -24,6 +26,7 @@
     "express-rate-limit": "^7.4.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.8.3",
     "zod": "^3.23.0"
   },
   "devDependencies": {
