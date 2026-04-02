@@ -61,7 +61,19 @@
     </div>
 
     <script>
-      const api = window.api;
+      // Wait for preload to inject window.api
+      function waitForApi() {
+        return new Promise((resolve) => {
+          if (window.api) return resolve(window.api);
+          const check = setInterval(() => {
+            if (window.api) { clearInterval(check); resolve(window.api); }
+          }, 50);
+          // Timeout after 3s — preload didn't load
+          setTimeout(() => { clearInterval(check); resolve(null); }, 3000);
+        });
+      }
+
+      let api = window.api;
       let tracking = false;
       let timerSeconds = 0;
       let timerInterval = null;
@@ -96,6 +108,7 @@
       }
 
       $('login-btn').addEventListener('click', async () => {
+        if (!api) { $('login-error').textContent = 'App not ready yet'; $('login-error').classList.remove('hidden'); return; }
         const email = $('email').value;
         const password = $('password').value;
         const result = await api.login(email, password);
@@ -140,12 +153,20 @@
         showScreen('login');
       });
 
-      // Check if already logged in
-      api.checkAuth().then(result => {
-        if (result.loggedIn) {
-          showScreen('tracker');
-          loadProjects();
+      // Wait for preload, then check if already logged in
+      waitForApi().then(resolvedApi => {
+        if (!resolvedApi) {
+          $('login-error').textContent = 'Desktop agent failed to initialize. Try restarting.';
+          $('login-error').classList.remove('hidden');
+          return;
         }
+        api = resolvedApi;
+        api.checkAuth().then(result => {
+          if (result.loggedIn) {
+            showScreen('tracker');
+            loadProjects();
+          }
+        });
       });
     </script>
   </body>
