@@ -6,22 +6,22 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "package": "electron-builder",
+    "prepackage": "bash scripts/prepare-native.sh",
+    "package": "npm run prepackage && electron-vite build && electron-builder",
     "lint": "tsc --noEmit"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
     "@time-tracker/shared": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12",
     "active-win": "^9.0.0",
     "better-sqlite3": "^11.7.0",
-    "electron-store": "^10.0.0",
-    "electron-updater": "^6.3.0",
-    "screenshot-desktop": "^1.15.0"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
     "electron": "^33.0.0",
     "electron-builder": "^25.1.0",
+    "electron-store": "^10.0.0",
+    "electron-updater": "^6.3.0",
     "electron-vite": "^3.0.0",
+    "screenshot-desktop": "^1.15.0",
     "typescript": "~5.4.5",
     "vite": "^6.0.0"
   }

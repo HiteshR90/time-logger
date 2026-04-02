@@ -9,8 +9,8 @@ export default defineConfig({
         entry: path.resolve(__dirname, "src/main/main.ts"),
       },
       rollupOptions: {
-        // Only native .node modules need external — everything else bundled
-        external: ["better-sqlite3"],
+        // Native .node modules must stay external (loaded from node_modules at runtime)
+        external: ["better-sqlite3", "active-win"],
       },
     },
   },

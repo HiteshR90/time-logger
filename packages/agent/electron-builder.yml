@@ -5,10 +5,14 @@ directories:
   buildResources: build
 files:
   - out/**/*
+  - native_modules/**/*
   - package.json
+  - "!node_modules"
 extraMetadata:
   main: out/main/main.js
 asar: true
+asarUnpack:
+  - "native_modules/**/*.node"
 npmRebuild: false
 mac:
   category: public.app-category.productivity
