@@ -23,6 +23,7 @@
       .status.stopped { background: #1e293b; color: #94a3b8; }
       .timer { font-size: 36px; font-weight: 700; text-align: center; margin: 20px 0; font-variant-numeric: tabular-nums; }
       .error { color: #fca5a5; font-size: 13px; margin-top: 8px; }
+      .success { color: #86efac; font-size: 13px; margin-top: 8px; }
       .hidden { display: none; }
     </style>
   </head>
@@ -46,6 +47,7 @@
       <!-- Tracker Screen -->
       <div id="tracker-screen" class="hidden">
         <h1>TimeTracker</h1>
+        <div id="user-info" class="status stopped"></div>
         <div class="form-group">
           <label>Project</label>
           <select id="project-select">
@@ -61,25 +63,22 @@
     </div>
 
     <script>
-      // Wait for preload to inject window.api
-      function waitForApi() {
-        return new Promise((resolve) => {
-          if (window.api) return resolve(window.api);
-          const check = setInterval(() => {
-            if (window.api) { clearInterval(check); resolve(window.api); }
-          }, 50);
-          // Timeout after 3s — preload didn't load
-          setTimeout(() => { clearInterval(check); resolve(null); }, 3000);
-        });
-      }
-
-      let api = window.api;
+      const API_BASE = 'http://localhost:5080';
+      let accessToken = localStorage.getItem('agent_token');
+      let currentUser = null;
       let tracking = false;
       let timerSeconds = 0;
       let timerInterval = null;
-      let currentUser = null;
 
       const $ = (id) => document.getElementById(id);
+
+      // Direct API calls (no IPC needed)
+      async function apiCall(path, options = {}) {
+        const headers = { 'Content-Type': 'application/json', ...options.headers };
+        if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+        const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+        return res.json();
+      }
 
       function updateTimer() {
         const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
@@ -94,11 +93,11 @@
       }
 
       async function loadProjects() {
-        const result = await api.listProjects();
+        const result = await apiCall('/projects');
         if (result.success) {
           const select = $('project-select');
           select.innerHTML = '<option value="">Select a project...</option>';
-          result.projects.forEach(p => {
+          result.data.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
             opt.textContent = p.name;
@@ -107,38 +106,58 @@
         }
       }
 
+      // Login
       $('login-btn').addEventListener('click', async () => {
-        if (!api) { $('login-error').textContent = 'App not ready yet'; $('login-error').classList.remove('hidden'); return; }
         const email = $('email').value;
         const password = $('password').value;
-        const result = await api.login(email, password);
-        if (result.success) {
-          currentUser = result.user;
-          showScreen('tracker');
-          loadProjects();
-        } else {
-          $('login-error').textContent = result.error || 'Login failed';
+        if (!email || !password) return;
+
+        $('login-error').classList.add('hidden');
+        $('login-btn').textContent = 'Signing in...';
+        $('login-btn').disabled = true;
+
+        try {
+          const result = await apiCall('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (result.success) {
+            accessToken = result.data.accessToken;
+            localStorage.setItem('agent_token', accessToken);
+            localStorage.setItem('agent_refresh', result.data.refreshToken);
+            currentUser = result.data.user;
+            $('user-info').textContent = `Logged in as ${currentUser.name}`;
+            showScreen('tracker');
+            loadProjects();
+          } else {
+            $('login-error').textContent = result.error || 'Login failed';
+            $('login-error').classList.remove('hidden');
+          }
+        } catch (err) {
+          $('login-error').textContent = 'Cannot connect to API server. Is it running?';
           $('login-error').classList.remove('hidden');
         }
+
+        $('login-btn').textContent = 'Sign In';
+        $('login-btn').disabled = false;
       });
 
-      $('start-btn').addEventListener('click', async () => {
+      // Start tracking
+      $('start-btn').addEventListener('click', () => {
         const projectId = $('project-select').value;
         if (!projectId) return alert('Select a project first');
-        const result = await api.startTracking(currentUser.id, projectId);
-        if (result.success) {
-          tracking = true;
-          timerSeconds = 0;
-          timerInterval = setInterval(() => { timerSeconds++; updateTimer(); }, 1000);
-          $('start-btn').classList.add('hidden');
-          $('stop-btn').classList.remove('hidden');
-          $('tracking-status').className = 'status tracking';
-          $('tracking-status').textContent = 'Tracking...';
-        }
+        tracking = true;
+        timerSeconds = 0;
+        timerInterval = setInterval(() => { timerSeconds++; updateTimer(); }, 1000);
+        $('start-btn').classList.add('hidden');
+        $('stop-btn').classList.remove('hidden');
+        $('tracking-status').className = 'status tracking';
+        $('tracking-status').textContent = 'Tracking...';
       });
 
-      $('stop-btn').addEventListener('click', async () => {
-        await api.stopTracking();
+      // Stop tracking
+      $('stop-btn').addEventListener('click', () => {
         tracking = false;
         clearInterval(timerInterval);
         $('start-btn').classList.remove('hidden');
@@ -147,26 +166,37 @@
         $('tracking-status').textContent = 'Not tracking';
       });
 
-      $('logout-btn').addEventListener('click', async () => {
-        if (tracking) await api.stopTracking();
-        await api.logout();
+      // Logout
+      $('logout-btn').addEventListener('click', () => {
+        if (tracking) { tracking = false; clearInterval(timerInterval); }
+        accessToken = null;
+        currentUser = null;
+        localStorage.removeItem('agent_token');
+        localStorage.removeItem('agent_refresh');
         showScreen('login');
       });
 
-      // Wait for preload, then check if already logged in
-      waitForApi().then(resolvedApi => {
-        if (!resolvedApi) {
-          $('login-error').textContent = 'Desktop agent failed to initialize. Try restarting.';
-          $('login-error').classList.remove('hidden');
-          return;
-        }
-        api = resolvedApi;
-        api.checkAuth().then(result => {
-          if (result.loggedIn) {
+      // Check if already logged in
+      if (accessToken) {
+        apiCall('/organizations/me').then(result => {
+          if (result.success) {
+            const stored = localStorage.getItem('agent_user');
+            if (stored) currentUser = JSON.parse(stored);
+            $('user-info').textContent = currentUser ? `Logged in as ${currentUser.name}` : 'Logged in';
             showScreen('tracker');
             loadProjects();
+          } else {
+            accessToken = null;
+            localStorage.removeItem('agent_token');
           }
+        }).catch(() => {
+          // API not available, stay on login
         });
+      }
+
+      // Allow Enter key to submit login
+      $('password').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') $('login-btn').click();
       });
     </script>
   </body>

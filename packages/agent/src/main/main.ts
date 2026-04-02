@@ -1,32 +1,26 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
-import { loadStoredTokens, setTokens, clearTokens, apiRequest, getAccessToken } from "./api-client";
 import { startInputTracking, stopInputTracking } from "./capture/input-tracker";
 import { startAppTracking, stopAppTracking, setCategoryRules } from "./capture/app-tracker";
 import { startIdleDetection, stopIdleDetection, setIdleTimeout, onIdle } from "./capture/idle-detector";
 import { configure, startSync, stopSync } from "./sync/sync-service";
 import { fetchConfig, loadCachedConfig } from "./config/config-manager";
-import { createTray, updateTrayMenu, destroyTray } from "./tray";
+import { destroyTray } from "./tray";
 import { closeDb } from "./sync/offline-queue";
+import { loadStoredTokens, setTokens, clearTokens, apiRequest, getAccessToken } from "./api-client";
 
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
-  const preloadPath = path.join(__dirname, "../preload/preload.js");
-  console.log("Preload path:", preloadPath);
-  console.log("Preload exists:", require("fs").existsSync(preloadPath));
-
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 500,
+    width: 420,
+    height: 520,
     resizable: false,
     show: true,
     webPreferences: {
-      preload: preloadPath,
-      contextIsolation: true,
+      contextIsolation: false,
       nodeIntegration: false,
       sandbox: false,
-      webSecurity: false,
     },
   });
 
@@ -41,21 +35,16 @@ function createWindow() {
     e.preventDefault();
     mainWindow?.hide();
   });
-
-  createTray(mainWindow);
 }
 
 async function initializeTracking() {
   const config = await fetchConfig();
-
   setCategoryRules(config.appCategories);
   setIdleTimeout(config.idleTimeoutMin);
-
   onIdle(
     () => console.log("User went idle"),
     () => console.log("User returned from idle"),
   );
-
   startInputTracking();
   startAppTracking();
   startIdleDetection();
@@ -74,7 +63,7 @@ ipcMain.handle("auth:login", async (_e, email: string, password: string) => {
       setTokens(data.data.accessToken, data.data.refreshToken);
       return { success: true, user: data.data.user };
     }
-    return { success: false, error: data.error };
+    return { success: false, error: data.error || "Login failed" };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
@@ -127,7 +116,6 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  // Keep running in tray on macOS
   if (process.platform !== "darwin") {
     app.quit();
   }
