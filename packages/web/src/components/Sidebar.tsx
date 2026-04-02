@@ -3,15 +3,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import {
-  Monitor, Clock, UserPlus, Building2, Users,
-  FileText, Settings, BarChart3, LayoutDashboard, LogOut,
+  Monitor, Clock, UserPlus, Building2, FolderKanban, Users,
+  FileText, Settings, BarChart3, LayoutDashboard, LogOut, ChevronDown,
 } from "lucide-react";
+import { useState } from "react";
 
-const NAV_ITEMS = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: any;
+  roles: string[];
+  children?: { href: string; label: string; icon: any; roles: string[] }[];
+}
+
+const NAV_ITEMS: NavItem[] = [
   { href: "/live", label: "Live Feed", icon: Monitor, roles: ["owner", "manager"] },
   { href: "/timesheets", label: "Timesheets", icon: Clock, roles: ["owner", "manager", "employee"] },
   { href: "/members", label: "Members", icon: UserPlus, roles: ["owner", "manager"] },
-  { href: "/clients", label: "Clients & Projects", icon: Building2, roles: ["owner", "manager", "employee"] },
+  {
+    href: "/clients", label: "Clients", icon: Building2, roles: ["owner", "manager", "employee"],
+    children: [
+      { href: "/projects", label: "Projects", icon: FolderKanban, roles: ["owner", "manager", "employee"] },
+    ],
+  },
   { href: "/teams", label: "Teams", icon: Users, roles: ["owner"] },
   { href: "/invoices", label: "Invoices", icon: FileText, roles: ["owner"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["owner", "manager"] },
@@ -22,10 +36,14 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({ "/clients": true });
 
-  const visibleItems = NAV_ITEMS.filter((item) =>
-    item.roles.includes(user?.role || ""),
-  );
+  const toggleMenu = (href: string) => {
+    setExpandedMenus((prev) => ({ ...prev, [href]: !prev[href] }));
+  };
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
 
   return (
     <aside className="w-56 bg-slate-800 border-r border-slate-700 flex flex-col h-screen sticky top-0">
@@ -34,17 +52,57 @@ export function Sidebar() {
         <p className="text-xs text-slate-400 mt-1">{user?.name}</p>
       </div>
       <nav className="flex-1 py-2 overflow-y-auto">
-        {visibleItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/")
-            || (item.href === "/clients" && pathname.startsWith("/projects"));
+        {NAV_ITEMS.filter((item) => item.roles.includes(user?.role || "")).map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+          const active = isActive(item.href) || (hasChildren && item.children!.some((c) => isActive(c.href)));
+          const expanded = expandedMenus[item.href] || active;
+
           return (
-            <Link key={item.href} href={item.href}
-              className={`flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
-                active ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-slate-700"
-              }`}>
-              <item.icon size={18} />
-              {item.label}
-            </Link>
+            <div key={item.href}>
+              {hasChildren ? (
+                <button onClick={() => toggleMenu(item.href)}
+                  className={`flex items-center justify-between w-full px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
+                    active ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-slate-700"
+                  }`} style={{ width: "calc(100% - 16px)" }}>
+                  <span className="flex items-center gap-3">
+                    <item.icon size={18} />
+                    {item.label}
+                  </span>
+                  <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+                </button>
+              ) : (
+                <Link href={item.href}
+                  className={`flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${
+                    isActive(item.href) ? "bg-blue-600/20 text-blue-400" : "text-slate-300 hover:bg-slate-700"
+                  }`}>
+                  <item.icon size={18} />
+                  {item.label}
+                </Link>
+              )}
+
+              {/* Submenu */}
+              {hasChildren && expanded && (
+                <div className="ml-4">
+                  <Link href={item.href}
+                    className={`flex items-center gap-3 px-4 py-1.5 mx-2 rounded-lg text-xs transition-colors ${
+                      isActive(item.href) && !item.children!.some((c) => isActive(c.href))
+                        ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+                    }`}>
+                    <item.icon size={14} />
+                    All {item.label}
+                  </Link>
+                  {item.children!.filter((c) => c.roles.includes(user?.role || "")).map((child) => (
+                    <Link key={child.href} href={child.href}
+                      className={`flex items-center gap-3 px-4 py-1.5 mx-2 rounded-lg text-xs transition-colors ${
+                        isActive(child.href) ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+                      }`}>
+                      <child.icon size={14} />
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
