@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Save, UserX, UserCheck } from "lucide-react";
+import { ArrowLeft, Save, UserX, UserCheck, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 const SCREENSHOT_OPTIONS = [
@@ -35,6 +35,11 @@ export default function MemberEditPage() {
   const [isActive, setIsActive] = useState(true);
   const [saved, setSaved] = useState(false);
 
+  // Project assignment
+  const [showAddProject, setShowAddProject] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [projectRate, setProjectRate] = useState("50");
+
   const { data: member, isLoading } = useQuery({
     queryKey: ["user", id],
     queryFn: () => apiFetch(`/users/${id}`),
@@ -45,10 +50,22 @@ export default function MemberEditPage() {
     queryFn: () => apiFetch("/departments"),
   });
 
+  const { data: projects } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => apiFetch("/projects"),
+  });
+
+  const { data: org } = useQuery({
+    queryKey: ["org"],
+    queryFn: () => apiFetch("/organizations/me"),
+  });
+
   const { data: resolvedSettings } = useQuery({
     queryKey: ["user-monitoring", id],
     queryFn: () => apiFetch(`/users/${id}/monitoring-settings`),
   });
+
+  const orgCurrency = (org?.settings as any)?.defaultCurrency || "USD";
 
   useEffect(() => {
     if (member) {
@@ -63,7 +80,6 @@ export default function MemberEditPage() {
       else if (ms?.blurScreenshots) setScreenshotSetting("blurred");
       else if (ms?.screenshotIntervalMin) setScreenshotSetting(String(ms.screenshotIntervalMin));
       else setScreenshotSetting("");
-
       setIdleTimeout(ms?.idleTimeoutMin ? String(ms.idleTimeoutMin) : "");
     }
   }, [member]);
@@ -73,44 +89,48 @@ export default function MemberEditPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["user", id] });
-      queryClient.invalidateQueries({ queryKey: ["user-monitoring", id] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     },
   });
 
+  const addToProjectMutation = useMutation({
+    mutationFn: (data: { projectId: string; userId: string; hourlyRate: number }) =>
+      apiFetch(`/projects/${data.projectId}/members`, { method: "POST", body: JSON.stringify({ userId: data.userId, hourlyRate: data.hourlyRate }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user", id] });
+      setShowAddProject(false);
+      setSelectedProjectId("");
+      setProjectRate("50");
+    },
+  });
+
+  const removeFromProjectMutation = useMutation({
+    mutationFn: (projectId: string) =>
+      apiFetch(`/projects/${projectId}/members/${id}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["user", id] }),
+  });
+
   const handleSave = () => {
     const monitoringSettings: any = {};
-
-    if (screenshotSetting === "disabled") {
-      monitoringSettings.screenshotEnabled = false;
-    } else if (screenshotSetting === "blurred") {
-      monitoringSettings.screenshotEnabled = true;
-      monitoringSettings.blurScreenshots = true;
-    } else if (screenshotSetting) {
-      monitoringSettings.screenshotEnabled = true;
-      monitoringSettings.blurScreenshots = false;
-      monitoringSettings.screenshotIntervalMin = Number(screenshotSetting);
-    }
-
-    if (idleTimeout) {
-      monitoringSettings.idleTimeoutMin = Number(idleTimeout);
-    }
+    if (screenshotSetting === "disabled") monitoringSettings.screenshotEnabled = false;
+    else if (screenshotSetting === "blurred") { monitoringSettings.screenshotEnabled = true; monitoringSettings.blurScreenshots = true; }
+    else if (screenshotSetting) { monitoringSettings.screenshotEnabled = true; monitoringSettings.blurScreenshots = false; monitoringSettings.screenshotIntervalMin = Number(screenshotSetting); }
+    if (idleTimeout) monitoringSettings.idleTimeoutMin = Number(idleTimeout);
 
     const updateData: any = {
-      name,
-      role,
+      name, role,
       departmentId: departmentId || null,
       isActive,
       monitoringSettings: Object.keys(monitoringSettings).length > 0 ? monitoringSettings : null,
     };
-    if (isOwner) {
-      updateData.yearlySalary = yearlySalary ? Number(yearlySalary) : null;
-    }
+    if (isOwner) updateData.yearlySalary = yearlySalary ? Number(yearlySalary) : null;
     saveMutation.mutate(updateData);
   };
 
   const assignableRoles = isOwner ? ALL_ROLES : ["employee", "manager"];
+  const assignedProjectIds = new Set(member?.projectMembers?.map((pm: any) => pm.project.id) || []);
+  const availableProjects = projects?.filter((p: any) => !assignedProjectIds.has(p.id)) || [];
 
   if (isLoading) return <div className="text-slate-400 p-6">Loading...</div>;
   if (!member) return <div className="text-red-400 p-6">Member not found</div>;
@@ -169,20 +189,88 @@ export default function MemberEditPage() {
             <h2 className="text-lg font-semibold mb-4">Compensation</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-slate-400 mb-1">Yearly Salary</label>
+                <label className="block text-sm text-slate-400 mb-1">Yearly Salary ({orgCurrency})</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-slate-500 text-sm">$</span>
+                  <span className="absolute left-3 top-2.5 text-slate-500 text-sm">
+                    {orgCurrency === "USD" ? "$" : orgCurrency === "EUR" ? "€" : orgCurrency === "GBP" ? "£" : orgCurrency === "INR" ? "₹" : orgCurrency === "AED" ? "د.إ" : orgCurrency}
+                  </span>
                   <input type="number" value={yearlySalary} onChange={(e) => setYearlySalary(e.target.value)}
                     placeholder="Not set" min="0" step="1000"
-                    className="w-full pl-7 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
+                    className="w-full pl-8 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
                 </div>
               </div>
               <div className="flex items-end">
-                <p className="text-xs text-slate-500 pb-2">Only visible to organization owners. Not shown to managers or employees.</p>
+                <p className="text-xs text-slate-500 pb-2">Currency ({orgCurrency}) is set in organization Settings. Only visible to owners.</p>
               </div>
             </div>
           </div>
         )}
+
+        {/* Project Assignments */}
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Project Assignments</h2>
+            <button onClick={() => setShowAddProject(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs">
+              <Plus size={12} /> Assign to Project
+            </button>
+          </div>
+
+          {showAddProject && (
+            <div className="mb-4 p-3 bg-slate-900/50 rounded-lg">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!selectedProjectId) return;
+                const proj = projects?.find((p: any) => p.id === selectedProjectId);
+                addToProjectMutation.mutate({
+                  projectId: selectedProjectId,
+                  userId: id,
+                  hourlyRate: proj?.budgetType === "hourly" ? Number(projectRate) : 0,
+                });
+              }} className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <label className="block text-xs text-slate-400 mb-1">Project</label>
+                  <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)} required
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm">
+                    <option value="">Select project...</option>
+                    {availableProjects.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.budgetType})</option>
+                    ))}
+                  </select>
+                </div>
+                {selectedProjectId && projects?.find((p: any) => p.id === selectedProjectId)?.budgetType === "hourly" && (
+                  <div className="w-28">
+                    <label className="block text-xs text-slate-400 mb-1">Rate/hr</label>
+                    <input type="number" value={projectRate} onChange={(e) => setProjectRate(e.target.value)} min="0"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
+                  </div>
+                )}
+                <button type="submit" className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs">Add</button>
+                <button type="button" onClick={() => setShowAddProject(false)} className="px-3 py-2 bg-slate-700 rounded-lg text-xs">Cancel</button>
+              </form>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {member.projectMembers?.length > 0 ? member.projectMembers.map((pm: any) => (
+              <div key={pm.project.id} className="flex items-center justify-between px-3 py-2 bg-slate-900/50 rounded-lg">
+                <div>
+                  <span className="text-sm">{pm.project.name}</span>
+                  {pm.hourlyRate > 0 && <span className="text-xs text-slate-400 ml-2">${pm.hourlyRate}/hr</span>}
+                </div>
+                <button onClick={() => removeFromProjectMutation.mutate(pm.project.id)}
+                  className="p-1 hover:bg-red-900/30 rounded" title="Remove from project">
+                  <Trash2 size={14} className="text-red-400" />
+                </button>
+              </div>
+            )) : (
+              <p className="text-xs text-slate-500 text-center py-4">Not assigned to any projects</p>
+            )}
+          </div>
+          {availableProjects.length === 0 && !showAddProject && member.projectMembers?.length > 0 && (
+            <p className="text-xs text-slate-500 mt-2">Assigned to all projects</p>
+          )}
+        </div>
 
         {/* Monitoring Settings */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
@@ -205,8 +293,6 @@ export default function MemberEditPage() {
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
             </div>
           </div>
-
-          {/* Resolved settings */}
           {resolvedSettings && (
             <div className="mt-4 p-3 bg-slate-900/50 rounded-lg">
               <p className="text-xs text-slate-500 mb-2">Effective settings (after cascade):</p>
@@ -240,21 +326,6 @@ export default function MemberEditPage() {
             </button>
           </div>
         </div>
-
-        {/* Projects */}
-        {member.projectMembers?.length > 0 && (
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Assigned Projects</h2>
-            <div className="space-y-2">
-              {member.projectMembers.map((pm: any) => (
-                <div key={pm.project.id} className="flex items-center justify-between px-3 py-2 bg-slate-900/50 rounded-lg">
-                  <span className="text-sm">{pm.project.name}</span>
-                  <span className="text-xs text-slate-400">${pm.hourlyRate}/hr</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Save Button */}
         <button onClick={handleSave} disabled={saveMutation.isPending}
