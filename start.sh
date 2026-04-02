@@ -7,6 +7,10 @@ PSQL="/opt/homebrew/opt/postgresql@17/bin/psql"
 echo "=== TimeTracker — Starting All Services ==="
 echo ""
 
+# 0. Kill leftover processes on required ports
+lsof -ti:5080 -ti:3000 | xargs kill -9 2>/dev/null
+echo "[✓] Ports 5080, 3000 cleared"
+
 # 1. Check PostgreSQL
 if ! $PSQL -U hitesh -d timetracker -c "SELECT 1" &>/dev/null; then
   echo "[!] PostgreSQL not running or 'timetracker' DB missing."
