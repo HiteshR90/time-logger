@@ -48,6 +48,12 @@
       <!-- Tracker Screen -->
       <div id="tracker-screen" class="hidden">
         <h1>TimeTracker</h1>
+        <!-- Permission banner -->
+        <div id="permission-banner" class="hidden" style="background:#7f1d1d;color:#fca5a5;padding:10px;border-radius:6px;margin-bottom:12px;font-size:13px;">
+          <strong>Screen Recording permission required.</strong><br>
+          <span style="font-size:12px;color:#fecaca;">Grant permission to capture screenshots and track app usage.</span><br>
+          <button id="open-settings-btn" style="margin-top:6px;padding:6px 12px;background:#dc2626;color:white;border:none;border-radius:4px;font-size:12px;cursor:pointer;">Open System Settings</button>
+        </div>
         <div id="user-info" class="status stopped"></div>
         <div class="form-group">
           <label>Project</label>
@@ -98,6 +104,7 @@
       function showScreen(screen) {
         $('login-screen').classList.toggle('hidden', screen !== 'login');
         $('tracker-screen').classList.toggle('hidden', screen !== 'tracker');
+        if (screen === 'tracker') checkPermission();
       }
 
       async function loadProjects() {
@@ -199,6 +206,29 @@
         localStorage.removeItem('agent_refresh');
         showScreen('login');
       });
+
+      // Check Screen Recording permission
+      async function checkPermission() {
+        try {
+          const perms = await ipcRenderer.invoke('permissions:check');
+          if (!perms.screenRecording) {
+            $('permission-banner').classList.remove('hidden');
+            $('start-btn').disabled = true;
+            $('start-btn').textContent = 'Permission Required';
+          } else {
+            $('permission-banner').classList.add('hidden');
+            $('start-btn').disabled = false;
+            $('start-btn').textContent = 'Start Tracking';
+          }
+        } catch {}
+      }
+
+      $('open-settings-btn').addEventListener('click', () => {
+        ipcRenderer.invoke('permissions:open-settings');
+      });
+
+      // Re-check permission every 5 seconds (user might grant it while app is open)
+      setInterval(checkPermission, 5000);
 
       // Check main process for stored session (persists across restarts)
       ipcRenderer.invoke('auth:get-stored-session').then(session => {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, systemPreferences, shell, dialog } from "electron";
 import path from "path";
 import { startInputTracking, stopInputTracking } from "./capture/input-tracker";
 import { startAppTracking, stopAppTracking, setCategoryRules } from "./capture/app-tracker";
@@ -105,7 +105,39 @@ ipcMain.handle("projects:list", async () => {
   }
 });
 
+// Permission check
+function hasScreenPermission(): boolean {
+  if (process.platform !== "darwin") return true;
+  const status = systemPreferences.getMediaAccessStatus("screen");
+  return status === "granted";
+}
+
+ipcMain.handle("permissions:check", () => {
+  return { screenRecording: hasScreenPermission() };
+});
+
+ipcMain.handle("permissions:open-settings", () => {
+  shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture");
+  return { success: true };
+});
+
 ipcMain.handle("tracking:start", async (_e, userId: string, projectId: string) => {
+  // Block tracking without Screen Recording permission
+  if (!hasScreenPermission()) {
+    const result = await dialog.showMessageBox({
+      type: "warning",
+      title: "Permission Required",
+      message: "Screen Recording permission is required to track activity and capture screenshots.",
+      detail: "Click 'Open Settings' to grant permission, then restart the app.",
+      buttons: ["Open Settings", "Cancel"],
+      defaultId: 0,
+    });
+    if (result.response === 0) {
+      shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture");
+    }
+    return { success: false, error: "Screen Recording permission required. Grant it in System Settings, then restart the app." };
+  }
+
   const config = loadCachedConfig();
   configure({
     userId,
