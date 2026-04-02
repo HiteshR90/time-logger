@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useParams } from "next/navigation";
-import { ArrowLeft, User, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Plus, Trash2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 export default function ProjectDetailPage() {
@@ -170,8 +170,9 @@ export default function ProjectDetailPage() {
                       </form>
                     ) : (
                       <button onClick={() => { setEditingRateUserId(m.userId); setEditRate(String(m.hourlyRate)); }}
-                        className="hover:bg-slate-700 px-2 py-1 rounded text-sm" title="Click to edit rate">
-                        ${m.hourlyRate}/hr
+                        className="flex items-center gap-1.5 hover:bg-slate-700 px-2 py-1 rounded text-sm group" title="Click to edit rate">
+                        <span>${m.hourlyRate}/hr</span>
+                        <Pencil size={12} className="text-slate-600 group-hover:text-blue-400" />
                       </button>
                     )}
                   </td>
