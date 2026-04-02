@@ -67,10 +67,18 @@ export function setCategoryRules(rules: Array<{ pattern: string; category: strin
 export function startAppTracking(intervalMs: number = 2000) {
   if (pollInterval) return;
 
+  let noPermissionLogged = false;
+
   pollInterval = setInterval(async () => {
     try {
       const win = await activeWindow();
-      if (!win) return;
+      if (!win) {
+        if (!noPermissionLogged) {
+          console.log("[app-tracker] No active window detected. On macOS, grant Screen Recording permission: System Settings → Privacy & Security → Screen Recording → allow TimeTracker");
+          noPermissionLogged = true;
+        }
+        return;
+      }
 
       const appName = win.owner.name;
       const title = win.title;
