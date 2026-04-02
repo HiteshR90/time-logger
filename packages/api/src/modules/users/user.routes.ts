@@ -6,6 +6,7 @@ export const userRoutes = Router();
 
 userRoutes.get("/", requireAuth, userController.listUsers);
 userRoutes.get("/:id", requireAuth, userController.getUser);
+userRoutes.get("/:id/monitoring-settings", requireAuth, userController.getMonitoringSettings);
 userRoutes.patch(
   "/:id",
   requireAuth,

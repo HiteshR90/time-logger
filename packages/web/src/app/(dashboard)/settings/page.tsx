@@ -50,11 +50,12 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+      <h1 className="text-2xl font-bold mb-2">Settings</h1>
+      <p className="text-sm text-slate-400 mb-6">Organization defaults. Override per department (Teams page) or per member (Members page).</p>
 
       <div className="max-w-lg space-y-6">
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h2 className="text-lg font-semibold mb-4">Monitoring</h2>
+          <h2 className="text-lg font-semibold mb-4">Monitoring Defaults</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm text-slate-400 mb-1">Screenshot Interval</label>

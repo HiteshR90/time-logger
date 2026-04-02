@@ -44,3 +44,19 @@ export async function updateUser(
     next(err);
   }
 }
+
+export async function getMonitoringSettings(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const settings = await userService.getUserMonitoringSettings(
+      req.user!.orgId,
+      getParam(req, "id"),
+    );
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    next(err);
+  }
+}

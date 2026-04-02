@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import {
-  Monitor, Clock, Camera, AppWindow, FolderKanban, Users, Building2,
+  Monitor, Clock, Camera, AppWindow, FolderKanban, Users, UserPlus, Building2,
   FileText, Settings, BarChart3, LayoutDashboard, LogOut,
 } from "lucide-react";
 
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/screenshots", label: "Screenshots", icon: Camera, roles: ["owner", "manager"] },
   { href: "/app-usage", label: "App Usage", icon: AppWindow, roles: ["owner", "manager"] },
   { href: "/projects", label: "Projects", icon: FolderKanban, roles: ["owner", "manager", "employee"] },
+  { href: "/members", label: "Members", icon: UserPlus, roles: ["owner", "manager"] },
   { href: "/clients", label: "Clients", icon: Building2, roles: ["owner"] },
   { href: "/teams", label: "Teams", icon: Users, roles: ["owner"] },
   { href: "/invoices", label: "Invoices", icon: FileText, roles: ["owner"] },

@@ -18,7 +18,6 @@ departmentRoutes.patch(
   "/:id",
   requireAuth,
   requireRole("owner"),
-  validate(CreateDepartmentSchema),
   departmentController.update,
 );
 departmentRoutes.delete(
