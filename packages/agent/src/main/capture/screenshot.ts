@@ -1,20 +1,34 @@
-import screenshot from "screenshot-desktop";
-import { nativeImage, app } from "electron";
+import { desktopCapturer, nativeImage, app, screen } from "electron";
 import path from "path";
 import fs from "fs";
 import { apiRequest } from "../api-client";
+
+async function captureScreen(): Promise<Buffer> {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.size;
+
+  const sources = await desktopCapturer.getSources({
+    types: ["screen"],
+    thumbnailSize: { width, height },
+  });
+
+  if (sources.length === 0) {
+    throw new Error("No screen source found");
+  }
+
+  // Use the primary screen's thumbnail
+  const thumbnail = sources[0].thumbnail;
+  return Buffer.from(thumbnail.toPNG());
+}
 
 export async function captureScreenshot(blurEnabled: boolean = false): Promise<{
   s3Key: string;
   buffer: Buffer;
 }> {
-  // Capture screen as PNG buffer
-  const rawBuffer = await screenshot({ format: "png" });
+  const rawBuffer = await captureScreen();
 
-  // Convert to JPEG using Electron's nativeImage (no sharp needed)
+  // Convert to JPEG using Electron's nativeImage
   const image = nativeImage.createFromBuffer(rawBuffer);
-
-  // Resize to 50% for smaller file size
   const resized = image.resize({ width: Math.round(image.getSize().width / 2) });
   const jpegBuffer = Buffer.from(resized.toJPEG(75));
 

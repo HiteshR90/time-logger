@@ -21,7 +21,6 @@
     "electron-store": "^10.0.0",
     "electron-updater": "^6.3.0",
     "electron-vite": "^3.0.0",
-    "screenshot-desktop": "^1.15.0",
     "typescript": "~5.4.5",
     "vite": "^6.0.0"
   }
