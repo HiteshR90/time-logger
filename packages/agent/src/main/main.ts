@@ -1,19 +1,5 @@
 import { app, BrowserWindow, ipcMain, systemPreferences, shell, dialog } from "electron";
 import path from "path";
-import Module from "module";
-
-// Add native_modules to require() search path so better-sqlite3 loads from bundle
-const nativeDir = path.join(__dirname, "..", "native_modules");
-const origResolve = (Module as any)._resolveLookupPaths;
-(Module as any)._resolveLookupPaths = function (request: string, parent: any) {
-  const result = origResolve.call(this, request, parent);
-  if (Array.isArray(result)) {
-    result.push(nativeDir);
-  } else if (result && Array.isArray(result.paths)) {
-    result.paths.push(nativeDir);
-  }
-  return result;
-};
 import { startInputTracking, stopInputTracking } from "./capture/input-tracker";
 import { startAppTracking, stopAppTracking, setCategoryRules } from "./capture/app-tracker";
 import { startIdleDetection, stopIdleDetection, setIdleTimeout, onIdle } from "./capture/idle-detector";

@@ -9,7 +9,7 @@ export default defineConfig({
         entry: path.resolve(__dirname, "src/main/main.ts"),
       },
       rollupOptions: {
-        external: ["better-sqlite3"],
+        external: [],
       },
     },
   },
