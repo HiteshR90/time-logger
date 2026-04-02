@@ -4,13 +4,14 @@ import type { ActivityPayload } from "@time-tracker/shared";
 export async function ingestActivity(payload: ActivityPayload) {
   const timestamp = new Date(payload.timestamp);
 
-  // Find or create active time entry for this user+project
+  // Find recent active time entry for this user+project (within last 5 minutes)
+  const fiveMinAgo = new Date(timestamp.getTime() - 5 * 60 * 1000);
+
   let timeEntry = await prisma.timeEntry.findFirst({
     where: {
       userId: payload.userId,
       projectId: payload.projectId,
-      endTime: null,
-      status: "active",
+      startTime: { gte: fiveMinAgo },
     },
     orderBy: { startTime: "desc" },
   });
@@ -26,7 +27,7 @@ export async function ingestActivity(payload: ActivityPayload) {
     });
   }
 
-  // Update duration
+  // Update duration and end time
   const durationSec = Math.floor(
     (timestamp.getTime() - timeEntry.startTime.getTime()) / 1000,
   );
