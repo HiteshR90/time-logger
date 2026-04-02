@@ -2,7 +2,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
-import { app } from "electron";
+import { app, systemPreferences } from "electron";
 
 const execFileAsync = promisify(execFile);
 
@@ -59,13 +59,18 @@ async function getActiveWindow(): Promise<{ app: string; title: string } | null>
   }
 
   try {
-    const { stdout } = await execFileAsync(binaryPath);
+    // Timeout after 3s to avoid hanging
+    const { stdout } = await execFileAsync(binaryPath, [], { timeout: 3000 });
     const data = JSON.parse(stdout);
     if (data && data.app) {
       return { app: data.app, title: data.title || "" };
     }
-  } catch {
-    // Permission denied or binary error
+  } catch (err: any) {
+    // If permission denied or binary fails, disable app tracking silently
+    if (err.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" || err.killed) {
+      console.log("[app-tracker] Binary timed out — disabling app tracking");
+      stopAppTracking();
+    }
   }
   return null;
 }
@@ -99,6 +104,16 @@ export function setCategoryRules(rules: Array<{ pattern: string; category: strin
 
 export function startAppTracking(intervalMs: number = 2000) {
   if (pollInterval) return;
+
+  // Check Accessibility permission WITHOUT triggering the system prompt
+  if (process.platform === "darwin") {
+    const trusted = systemPreferences.isTrustedAccessibilityClient(false);
+    if (!trusted) {
+      console.log("[app-tracker] Accessibility permission not granted — skipping app tracking. Grant it in System Settings → Privacy & Security → Accessibility");
+      return;
+    }
+  }
+
   let errorLogged = false;
 
   pollInterval = setInterval(async () => {
