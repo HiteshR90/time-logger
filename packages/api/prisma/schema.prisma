@@ -72,6 +72,8 @@ model Client {
   name      String
   email     String?
   address   String?
+  currency  String   @default("USD")
+  taxRate   Float    @default(0) @map("tax_rate")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

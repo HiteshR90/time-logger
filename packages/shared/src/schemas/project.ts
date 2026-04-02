@@ -4,6 +4,8 @@ export const CreateClientSchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().email().nullable().optional(),
   address: z.string().max(500).nullable().optional(),
+  currency: z.string().length(3).default("USD"),
+  taxRate: z.number().min(0).max(100).default(0),
 });
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
 

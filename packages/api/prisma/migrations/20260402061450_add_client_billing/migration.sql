@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "clients" ADD COLUMN     "currency" TEXT NOT NULL DEFAULT 'USD',
+ADD COLUMN     "tax_rate" DOUBLE PRECISION NOT NULL DEFAULT 0;

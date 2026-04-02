@@ -4,11 +4,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { Plus, Building2, Link as LinkIcon } from "lucide-react";
 
+const CURRENCIES = ["USD", "EUR", "GBP", "INR", "AED", "CAD", "AUD", "SGD", "JPY"];
+
 export default function ClientsPage() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [taxRate, setTaxRate] = useState("0");
+  const [address, setAddress] = useState("");
   const [linkingClientId, setLinkingClientId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
 
@@ -27,8 +32,7 @@ export default function ClientsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       setShowCreate(false);
-      setName("");
-      setEmail("");
+      setName(""); setEmail(""); setCurrency("USD"); setTaxRate("0"); setAddress("");
     },
   });
 
@@ -43,7 +47,6 @@ export default function ClientsPage() {
     },
   });
 
-  // Projects not assigned to any client
   const unlinkedProjects = projects?.filter((p: any) => !p.clientId) || [];
 
   return (
@@ -58,20 +61,42 @@ export default function ClientsPage() {
 
       {showCreate && (
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
-          <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate({ name, email: email || null }); }}
-            className="flex gap-4 items-end">
-            <div className="flex-1">
+          <h2 className="text-lg font-semibold mb-4">New Client</h2>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            createMutation.mutate({ name, email: email || null, address: address || null, currency, taxRate: Number(taxRate) });
+          }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm text-slate-400 mb-1">Client Name</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
             </div>
-            <div className="flex-1">
+            <div>
               <label className="block text-sm text-slate-400 mb-1">Email</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
             </div>
-            <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Create</button>
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 bg-slate-700 rounded-lg text-sm">Cancel</button>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Address</label>
+              <input value={address} onChange={(e) => setAddress(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Currency</label>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm">
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Tax Rate (%)</label>
+              <input type="number" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} min="0" max="100" step="0.1"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
+            </div>
+            <div className="flex items-end gap-2">
+              <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Create</button>
+              <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 bg-slate-700 rounded-lg text-sm">Cancel</button>
+            </div>
           </form>
         </div>
       )}
@@ -99,26 +124,26 @@ export default function ClientsPage() {
                 </button>
               </div>
 
-              {/* Link project form */}
+              {/* Billing info */}
+              <div className="flex gap-3 mb-3 text-xs text-slate-400">
+                <span className="px-2 py-0.5 bg-slate-900/50 rounded">{client.currency || "USD"}</span>
+                <span className="px-2 py-0.5 bg-slate-900/50 rounded">Tax: {client.taxRate || 0}%</span>
+                {client.address && <span className="px-2 py-0.5 bg-slate-900/50 rounded">{client.address}</span>}
+              </div>
+
               {isLinking && unlinkedProjects.length > 0 && (
                 <div className="mb-3 flex gap-2">
                   <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}
                     className="flex-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-xs">
                     <option value="">Select project to link...</option>
-                    {unlinkedProjects.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
+                    {unlinkedProjects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                   <button onClick={() => {
                     if (selectedProjectId) linkProjectMutation.mutate({ projectId: selectedProjectId, clientId: client.id });
                   }} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs">Link</button>
                 </div>
               )}
-              {isLinking && unlinkedProjects.length === 0 && (
-                <p className="mb-3 text-xs text-slate-500">All projects are already linked to clients.</p>
-              )}
 
-              {/* Linked projects */}
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 mb-1">{clientProjects.length} project{clientProjects.length !== 1 ? "s" : ""}</p>
                 {clientProjects.map((p: any) => (

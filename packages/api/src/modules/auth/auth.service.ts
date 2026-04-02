@@ -5,6 +5,7 @@ import { prisma } from "../../config/prisma";
 import { config } from "../../config";
 import { AppError } from "../../middleware/errorHandler";
 import type { AuthPayload } from "../../middleware/auth";
+import { sendInviteEmail } from "../../services/email";
 import type {
   RegisterOrgInput,
   LoginInput,
@@ -175,6 +176,14 @@ export async function inviteMember(orgId: string, input: InviteMemberInput) {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
+
+  // Get org name for the email
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } });
+
+  // Send invite email (non-blocking — don't fail the invite if email fails)
+  sendInviteEmail(input.email, input.name, token, org?.name || "TimeTracker").catch((err) =>
+    console.error("Failed to send invite email:", err),
+  );
 
   return { inviteToken: token, email: input.email, name: input.name, role: input.role };
 }

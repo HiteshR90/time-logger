@@ -12,9 +12,6 @@ export default function SettingsPage() {
 
   const [screenshotInterval, setScreenshotInterval] = useState("5");
   const [idleTimeout, setIdleTimeout] = useState("5");
-  const [blurScreenshots, setBlurScreenshots] = useState(false);
-  const [defaultCurrency, setDefaultCurrency] = useState("USD");
-  const [defaultTaxRate, setDefaultTaxRate] = useState("0");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -22,9 +19,6 @@ export default function SettingsPage() {
       const s = org.settings as any;
       setScreenshotInterval(String(s.screenshotIntervalMin ?? 5));
       setIdleTimeout(String(s.idleTimeoutMin ?? 5));
-      setBlurScreenshots(s.blurScreenshots ?? false);
-      setDefaultCurrency(s.defaultCurrency ?? "USD");
-      setDefaultTaxRate(String(s.defaultTaxRate ?? 0));
     }
   }, [org]);
 
@@ -42,16 +36,13 @@ export default function SettingsPage() {
     saveMutation.mutate({
       screenshotIntervalMin: Number(screenshotInterval),
       idleTimeoutMin: Number(idleTimeout),
-      blurScreenshots,
-      defaultCurrency,
-      defaultTaxRate: Number(defaultTaxRate),
     });
   };
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-2">Settings</h1>
-      <p className="text-sm text-slate-400 mb-6">Organization defaults. Override per department (Teams page) or per member (Members page).</p>
+      <p className="text-sm text-slate-400 mb-6">Organization defaults. Override per department (Teams) or per member (Members).</p>
 
       <div className="max-w-lg space-y-6">
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
@@ -73,33 +64,13 @@ export default function SettingsPage() {
               <input type="number" value={idleTimeout} onChange={(e) => setIdleTimeout(e.target.value)} min="1" max="60"
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
             </div>
-            <div className="flex items-center gap-3">
-              <input type="checkbox" checked={blurScreenshots} onChange={(e) => setBlurScreenshots(e.target.checked)}
-                className="w-4 h-4 rounded bg-slate-700 border-slate-600" />
-              <label className="text-sm">Blur screenshots for privacy</label>
-            </div>
           </div>
+          <p className="text-xs text-slate-500 mt-4">Blur screenshots and screenshot interval can be overridden per employee on the Members page.</p>
         </div>
 
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h2 className="text-lg font-semibold mb-4">Billing</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Default Currency</label>
-              <select value={defaultCurrency} onChange={(e) => setDefaultCurrency(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm">
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="INR">INR (₹)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Default Tax Rate (%)</label>
-              <input type="number" value={defaultTaxRate} onChange={(e) => setDefaultTaxRate(e.target.value)} min="0" max="100" step="0.1"
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
-            </div>
-          </div>
+          <h2 className="text-lg font-semibold mb-2">Billing</h2>
+          <p className="text-sm text-slate-400">Currency and tax rate are set per client on the Clients page. Each client can have their own currency (USD, INR, AED, etc.) and tax rate.</p>
         </div>
 
         <button onClick={handleSave} disabled={saveMutation.isPending}

@@ -12,6 +12,7 @@ const SCREENSHOT_OPTIONS = [
   { value: "10", label: "Every 10 min" },
   { value: "-1", label: "Random" },
   { value: "disabled", label: "Disabled" },
+  { value: "blurred", label: "Blurred (privacy)" },
 ];
 
 const ALL_ROLES = ["employee", "manager", "owner"] as const;
@@ -90,6 +91,7 @@ export default function MembersPage() {
     setEditDept(user.departmentId || "");
     const ms = user.monitoringSettings as any;
     if (ms?.screenshotEnabled === false) setEditScreenshot("disabled");
+    else if (ms?.blurScreenshots) setEditScreenshot("blurred");
     else if (ms?.screenshotIntervalMin) setEditScreenshot(String(ms.screenshotIntervalMin));
     else setEditScreenshot("");
   };
@@ -98,8 +100,13 @@ export default function MembersPage() {
     const monitoringSettings: any = {};
     if (editScreenshot === "disabled") {
       monitoringSettings.screenshotEnabled = false;
+      monitoringSettings.blurScreenshots = false;
+    } else if (editScreenshot === "blurred") {
+      monitoringSettings.screenshotEnabled = true;
+      monitoringSettings.blurScreenshots = true;
     } else if (editScreenshot) {
       monitoringSettings.screenshotEnabled = true;
+      monitoringSettings.blurScreenshots = false;
       monitoringSettings.screenshotIntervalMin = Number(editScreenshot);
     }
     updateMutation.mutate({
@@ -116,6 +123,7 @@ export default function MembersPage() {
     const ms = user.monitoringSettings as any;
     if (!ms) return "Default";
     if (ms.screenshotEnabled === false) return "Disabled";
+    if (ms.blurScreenshots) return "Blurred";
     if (ms.screenshotIntervalMin) return `Every ${ms.screenshotIntervalMin} min`;
     return "Default";
   }
