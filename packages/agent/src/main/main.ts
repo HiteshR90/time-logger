@@ -138,13 +138,24 @@ ipcMain.handle("tracking:start", async (_e, userId: string, projectId: string) =
     return { success: false, error: "Screen Recording permission required. Grant it in System Settings, then restart the app." };
   }
 
-  const config = loadCachedConfig();
-  configure({
-    userId,
-    projectId,
-    screenshotIntervalMin: config.screenshotIntervalMin,
-    blurScreenshots: config.blurScreenshots,
-  });
+  // Fetch per-user resolved monitoring settings (user > dept > org cascade)
+  let screenshotIntervalMin = 5;
+  let blurScreenshots = false;
+  try {
+    const { data } = await apiRequest(`/users/${userId}/monitoring-settings`);
+    if (!data.screenshotEnabled) {
+      return { success: false, error: "Screenshots are disabled for your account. Contact your admin." };
+    }
+    screenshotIntervalMin = data.screenshotIntervalMin || 5;
+    blurScreenshots = data.blurScreenshots || false;
+    console.log("[tracking] User monitoring settings:", JSON.stringify(data));
+  } catch {
+    const config = loadCachedConfig();
+    screenshotIntervalMin = config.screenshotIntervalMin;
+    blurScreenshots = config.blurScreenshots;
+  }
+
+  configure({ userId, projectId, screenshotIntervalMin, blurScreenshots });
   await initializeTracking();
   startSync();
   return { success: true };

@@ -23,6 +23,7 @@ export async function ingestActivity(payload: ActivityPayload) {
         projectId: payload.projectId,
         startTime: timestamp,
         status: payload.isIdle ? "idle" : "active",
+        approval: "approved", // Auto-approve agent-tracked entries
       },
     });
   }

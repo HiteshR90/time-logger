@@ -20,13 +20,16 @@ export async function generateInvoice(orgId: string, input: GenerateInvoiceInput
   const projectIds = client.projects.map((p) => p.id);
   if (projectIds.length === 0) throw new AppError(400, "Client has no projects");
 
+  // Ensure toDate includes the entire end day
+  const toDate = new Date(input.toDate);
+  toDate.setHours(23, 59, 59, 999);
+
   // Get approved time entries for this client's projects in the date range
   const entries = await prisma.timeEntry.findMany({
     where: {
       projectId: { in: projectIds },
       approval: "approved",
-      startTime: { gte: new Date(input.fromDate) },
-      endTime: { lte: new Date(input.toDate) },
+      startTime: { gte: new Date(input.fromDate), lte: toDate },
     },
     include: {
       user: { select: { id: true, name: true } },
