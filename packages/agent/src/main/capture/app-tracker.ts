@@ -28,18 +28,20 @@ let binaryPath: string | null = null;
  */
 function findBinary(): string | null {
   const candidates = [
+    // Packaged app
     path.join(__dirname, "..", "native_modules", "active-win", "main"),
     path.join(process.resourcesPath || "", "app.asar.unpacked", "native_modules", "active-win", "main"),
-    path.join(__dirname, "..", "..", "native_modules", "active-win", "main"),
+    // Dev mode — relative to out/main/ → ../../node_modules/active-win/main
+    path.join(__dirname, "..", "..", "node_modules", "active-win", "main"),
+    // Dev mode — project root node_modules
+    path.join(__dirname, "..", "..", "..", "..", "node_modules", ".pnpm", "active-win@9.0.0_encoding@0.1.13", "node_modules", "active-win", "main"),
   ];
 
-  // Dev mode — resolve from node_modules
+  // Also try finding via app path
   try {
-    const devPath = path.join(
-      path.dirname(require.resolve("active-win/package.json")),
-      "main",
-    );
-    candidates.push(devPath);
+    const appPath = app.getAppPath();
+    candidates.push(path.join(appPath, "node_modules", "active-win", "main"));
+    candidates.push(path.join(appPath, "..", "node_modules", "active-win", "main"));
   } catch {}
 
   for (const p of candidates) {
@@ -48,7 +50,7 @@ function findBinary(): string | null {
       return p;
     }
   }
-  console.error("[app-tracker] Binary not found. Tried:", candidates);
+  console.log("[app-tracker] Binary not found — app tracking disabled. Tried:", candidates.join(", "));
   return null;
 }
 
