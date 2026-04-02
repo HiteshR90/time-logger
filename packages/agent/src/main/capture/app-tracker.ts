@@ -61,16 +61,18 @@ async function getActiveWindow(): Promise<{ app: string; title: string } | null>
   }
 
   try {
-    // Timeout after 3s to avoid hanging
-    const { stdout } = await execFileAsync(binaryPath, [], { timeout: 3000 });
+    const { stdout, stderr } = await execFileAsync(binaryPath, [], { timeout: 3000 });
+    if (stderr) console.log("[app-tracker] stderr:", stderr);
     const data = JSON.parse(stdout);
     if (data && data.app) {
       return { app: data.app, title: data.title || "" };
     }
+    // Binary returned data but no app — likely permission issue
+    console.log("[app-tracker] Binary returned:", stdout.substring(0, 100));
   } catch (err: any) {
-    // If permission denied or binary fails, disable app tracking silently
-    if (err.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER" || err.killed) {
-      console.log("[app-tracker] Binary timed out — disabling app tracking");
+    console.log("[app-tracker] Error:", err.message || err.code || String(err));
+    if (err.killed) {
+      console.log("[app-tracker] Binary timed out — disabling");
       stopAppTracking();
     }
   }
