@@ -27,7 +27,6 @@ const NAV_ITEMS: NavItem[] = [
       { href: "/projects", label: "Projects", icon: FolderKanban, always: true },
     ],
   },
-  { href: "/teams", label: "Teams", icon: Users, permission: "teams.manage" },
   { href: "/invoices", label: "Invoices", icon: FileText, permission: "invoices.view" },
   { href: "/reports", label: "Reports", icon: BarChart3, permission: "reports.view" },
   { href: "/my-dashboard", label: "My Dashboard", icon: LayoutDashboard, always: true },
