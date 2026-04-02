@@ -15,8 +15,7 @@
     "better-sqlite3": "^11.7.0",
     "electron-store": "^10.0.0",
     "electron-updater": "^6.3.0",
-    "screenshot-desktop": "^1.15.0",
-    "sharp": "^0.33.0"
+    "screenshot-desktop": "^1.15.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

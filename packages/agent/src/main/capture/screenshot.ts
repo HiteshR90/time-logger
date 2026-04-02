@@ -1,8 +1,7 @@
 import screenshot from "screenshot-desktop";
-import sharp from "sharp";
+import { nativeImage, app } from "electron";
 import path from "path";
 import fs from "fs";
-import { app } from "electron";
 import { apiRequest } from "../api-client";
 
 export async function captureScreenshot(blurEnabled: boolean = false): Promise<{
@@ -12,12 +11,12 @@ export async function captureScreenshot(blurEnabled: boolean = false): Promise<{
   // Capture screen as PNG buffer
   const rawBuffer = await screenshot({ format: "png" });
 
-  // Compress to JPEG (optionally blur)
-  let pipeline = sharp(rawBuffer).jpeg({ quality: 75 });
-  if (blurEnabled) {
-    pipeline = pipeline.blur(20);
-  }
-  const jpegBuffer = await pipeline.toBuffer();
+  // Convert to JPEG using Electron's nativeImage (no sharp needed)
+  const image = nativeImage.createFromBuffer(rawBuffer);
+
+  // Resize to 50% for smaller file size
+  const resized = image.resize({ width: Math.round(image.getSize().width / 2) });
+  const jpegBuffer = Buffer.from(resized.toJPEG(75));
 
   // Save locally
   const screenshotDir = path.join(app.getPath("userData"), "screenshots");
@@ -42,7 +41,7 @@ export async function captureScreenshot(blurEnabled: boolean = false): Promise<{
 
     s3Key = data.s3Key;
   } catch (err) {
-    console.log("S3 upload skipped (no storage configured), saved locally:", localPath);
+    console.log("[screenshot] S3 upload skipped, saved locally:", localPath);
   }
 
   return { s3Key, buffer: jpegBuffer };
