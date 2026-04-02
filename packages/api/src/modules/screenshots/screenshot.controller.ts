@@ -54,6 +54,8 @@ export async function serveFile(req: Request, res: Response, next: NextFunction)
       return;
     }
     res.setHeader("Content-Type", "image/jpeg");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Cache-Control", "public, max-age=3600");
     fs.createReadStream(filePath).pipe(res);
   } catch (err) {
     next(err);

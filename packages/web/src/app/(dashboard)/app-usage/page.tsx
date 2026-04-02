@@ -58,7 +58,11 @@ export default function AppUsagePage() {
       {isLoading ? <p className="text-slate-400">Loading...</p> : apps.length === 0 ? (
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center">
           <p className="text-slate-400">No app usage data for the selected period.</p>
-          <p className="text-slate-500 text-sm mt-1">Data appears when the desktop agent is running.</p>
+          <p className="text-slate-500 text-sm mt-2">App usage tracking requires:</p>
+          <ul className="text-slate-500 text-sm mt-1 text-left max-w-md mx-auto list-disc list-inside">
+            <li>Desktop agent running and tracking time</li>
+            <li>On macOS: <strong className="text-slate-400">System Settings → Privacy & Security → Screen Recording</strong> — grant permission to TimeTracker</li>
+          </ul>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
