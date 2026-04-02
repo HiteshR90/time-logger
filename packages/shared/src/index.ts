@@ -70,6 +70,14 @@ export type {
   UpdateLineItemInput,
 } from "./schemas";
 
+// Permissions
+export {
+  PERMISSIONS,
+  PERMISSION_CATEGORIES,
+  DEFAULT_ROLE_PERMISSIONS,
+} from "./permissions";
+export type { PermissionKey } from "./permissions";
+
 // Utils
 export {
   calculateActivityLevel,

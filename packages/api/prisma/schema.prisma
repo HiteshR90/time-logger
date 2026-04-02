@@ -17,12 +17,30 @@ model Organization {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   users       User[]
+  roles       Role[]
   departments Department[]
   clients     Client[]
   projects    Project[]
   invoices    Invoice[]
 
   @@map("organizations")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  orgId       String   @map("org_id")
+  name        String
+  isSystem    Boolean  @default(false) @map("is_system")
+  permissions Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  users        User[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+  @@map("roles")
 }
 
 model User {
@@ -32,6 +50,7 @@ model User {
   passwordHash String   @map("password_hash")
   name         String
   role         String   @default("employee")
+  roleId       String?  @map("role_id")
   departmentId String?  @map("department_id")
   avatarUrl    String?  @map("avatar_url")
   isActive           Boolean  @default(true) @map("is_active")
@@ -41,6 +60,7 @@ model User {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  assignedRole   Role?           @relation(fields: [roleId], references: [id], onDelete: SetNull)
   department     Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   projectMembers ProjectMember[]
   timeEntries    TimeEntry[]

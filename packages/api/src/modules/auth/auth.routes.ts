@@ -33,6 +33,8 @@ authRoutes.post(
   authController.refresh,
 );
 
+authRoutes.get("/me", requireAuth, authController.me);
+
 authRoutes.get(
   "/pending-invites",
   requireAuth,

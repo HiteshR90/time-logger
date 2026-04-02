@@ -6,6 +6,7 @@ import { config } from "../../config";
 import { AppError } from "../../middleware/errorHandler";
 import type { AuthPayload } from "../../middleware/auth";
 import { sendInviteEmail } from "../../services/email";
+import { createDefaultRoles } from "../roles/role.service";
 import type {
   RegisterOrgInput,
   LoginInput,
@@ -51,23 +52,29 @@ export async function registerOrg(input: RegisterOrgInput) {
       name: input.orgName,
       slug,
       settings: defaultSettings,
-      users: {
-        create: {
-          email: input.email,
-          passwordHash,
-          name: input.name,
-          role: "owner",
-        },
-      },
     },
-    include: { users: true },
   });
 
-  const user = org.users[0];
+  // Create default roles
+  const roleIds = await createDefaultRoles(org.id);
+
+  // Create owner user with role
+  const user = await prisma.user.create({
+    data: {
+      orgId: org.id,
+      email: input.email,
+      passwordHash,
+      name: input.name,
+      role: "owner",
+      roleId: roleIds.owner,
+    },
+  });
+
   const tokens = generateTokens({
     userId: user.id,
     orgId: org.id,
     role: user.role,
+    roleId: user.roleId || undefined,
   });
 
   await prisma.refreshToken.create({
@@ -103,6 +110,7 @@ export async function login(input: LoginInput) {
     userId: user.id,
     orgId: user.orgId,
     role: user.role,
+    roleId: user.roleId || undefined,
   });
 
   await prisma.refreshToken.create({

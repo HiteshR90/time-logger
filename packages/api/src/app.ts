@@ -14,6 +14,7 @@ import { screenshotRoutes } from "./modules/screenshots/screenshot.routes";
 import { timesheetRoutes } from "./modules/timesheets/timesheet.routes";
 import { invoiceRoutes } from "./modules/invoices/invoice.routes";
 import { reportRoutes } from "./modules/reports/report.routes";
+import { roleRoutes } from "./modules/roles/role.routes";
 
 export const app = express();
 
@@ -39,6 +40,7 @@ app.use("/screenshots", screenshotRoutes);
 app.use("/timesheets", timesheetRoutes);
 app.use("/invoices", invoiceRoutes);
 app.use("/reports", reportRoutes);
+app.use("/roles", roleRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);
