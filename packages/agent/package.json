@@ -13,7 +13,9 @@
   "dependencies": {},
   "devDependencies": {
     "@time-tracker/shared": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12",
     "active-win": "^9.0.0",
+    "better-sqlite3": "^11.7.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.1.0",
     "electron-store": "^10.0.0",

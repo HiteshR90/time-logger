@@ -1,75 +1,49 @@
+import Database from "better-sqlite3";
 import path from "path";
-import fs from "fs";
 import { app } from "electron";
 
-interface QueueItem {
-  id: number;
-  payload: object;
-  retries: number;
-  createdAt: string;
-}
+let db: Database.Database | null = null;
 
-let queue: QueueItem[] = [];
-let nextId = 1;
-let filePath: string | null = null;
-
-function getFilePath(): string {
-  if (!filePath) {
-    filePath = path.join(app.getPath("userData"), "offline-queue.json");
-    load();
+function getDb(): Database.Database {
+  if (!db) {
+    const dbPath = path.join(app.getPath("userData"), "offline-queue.db");
+    db = new Database(dbPath);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payload TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        retries INTEGER DEFAULT 0
+      )
+    `);
   }
-  return filePath;
-}
-
-function load() {
-  try {
-    if (filePath && fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-      queue = data.queue || [];
-      nextId = data.nextId || 1;
-    }
-  } catch {
-    queue = [];
-    nextId = 1;
-  }
-}
-
-function save() {
-  try {
-    getFilePath();
-    fs.writeFileSync(filePath!, JSON.stringify({ queue, nextId }, null, 2));
-  } catch (err) {
-    console.error("[offline-queue] Failed to save:", err);
-  }
+  return db;
 }
 
 export function enqueue(payload: object): void {
-  getFilePath();
-  queue.push({ id: nextId++, payload, retries: 0, createdAt: new Date().toISOString() });
-  save();
+  getDb().prepare("INSERT INTO queue (payload) VALUES (?)").run(JSON.stringify(payload));
 }
 
 export function dequeue(limit: number = 10): Array<{ id: number; payload: object }> {
-  getFilePath();
-  return queue.slice(0, limit).map((item) => ({ id: item.id, payload: item.payload }));
+  const rows = getDb()
+    .prepare("SELECT id, payload FROM queue ORDER BY id ASC LIMIT ?")
+    .all(limit) as Array<{ id: number; payload: string }>;
+  return rows.map((r) => ({ id: r.id, payload: JSON.parse(r.payload) }));
 }
 
 export function remove(id: number): void {
-  queue = queue.filter((item) => item.id !== id);
-  save();
+  getDb().prepare("DELETE FROM queue WHERE id = ?").run(id);
 }
 
 export function incrementRetries(id: number): void {
-  const item = queue.find((i) => i.id === id);
-  if (item) item.retries++;
-  save();
+  getDb().prepare("UPDATE queue SET retries = retries + 1 WHERE id = ?").run(id);
 }
 
 export function queueSize(): number {
-  getFilePath();
-  return queue.length;
+  const row = getDb().prepare("SELECT COUNT(*) as count FROM queue").get() as { count: number };
+  return row.count;
 }
 
 export function closeDb(): void {
-  save();
+  if (db) { db.close(); db = null; }
 }
