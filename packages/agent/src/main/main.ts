@@ -31,9 +31,8 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
-  mainWindow.on("close", (e) => {
-    e.preventDefault();
-    mainWindow?.hide();
+  mainWindow.on("closed", () => {
+    mainWindow = null;
   });
 }
 
