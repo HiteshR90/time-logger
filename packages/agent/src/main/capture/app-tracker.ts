@@ -2,7 +2,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import fs from "fs";
-import { app, systemPreferences } from "electron";
+import { app } from "electron";
 
 const execFileAsync = promisify(execFile);
 
@@ -104,15 +104,6 @@ export function setCategoryRules(rules: Array<{ pattern: string; category: strin
 
 export function startAppTracking(intervalMs: number = 2000) {
   if (pollInterval) return;
-
-  // Check Accessibility permission WITHOUT triggering the system prompt
-  if (process.platform === "darwin") {
-    const trusted = systemPreferences.isTrustedAccessibilityClient(false);
-    if (!trusted) {
-      console.log("[app-tracker] Accessibility permission not granted — skipping app tracking. Grant it in System Settings → Privacy & Security → Accessibility");
-      return;
-    }
-  }
 
   let errorLogged = false;
 
