@@ -3,18 +3,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import {
-  Monitor, Clock, Camera, AppWindow, FolderKanban, Users, UserPlus, Building2,
+  Monitor, Clock, UserPlus, Building2, Users,
   FileText, Settings, BarChart3, LayoutDashboard, LogOut,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/live", label: "Live Feed", icon: Monitor, roles: ["owner", "manager"] },
   { href: "/timesheets", label: "Timesheets", icon: Clock, roles: ["owner", "manager", "employee"] },
-  { href: "/screenshots", label: "Screenshots", icon: Camera, roles: ["owner", "manager"] },
-  { href: "/app-usage", label: "App Usage", icon: AppWindow, roles: ["owner", "manager"] },
-  { href: "/projects", label: "Projects", icon: FolderKanban, roles: ["owner", "manager", "employee"] },
   { href: "/members", label: "Members", icon: UserPlus, roles: ["owner", "manager"] },
-  { href: "/clients", label: "Clients", icon: Building2, roles: ["owner"] },
+  { href: "/clients", label: "Clients & Projects", icon: Building2, roles: ["owner", "manager", "employee"] },
   { href: "/teams", label: "Teams", icon: Users, roles: ["owner"] },
   { href: "/invoices", label: "Invoices", icon: FileText, roles: ["owner"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["owner", "manager"] },
@@ -38,7 +35,8 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 py-2 overflow-y-auto">
         {visibleItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + "/");
+          const active = pathname === item.href || pathname.startsWith(item.href + "/")
+            || (item.href === "/clients" && pathname.startsWith("/projects"));
           return (
             <Link key={item.href} href={item.href}
               className={`flex items-center gap-3 px-4 py-2 mx-2 rounded-lg text-sm transition-colors ${

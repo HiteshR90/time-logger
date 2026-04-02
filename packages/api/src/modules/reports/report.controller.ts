@@ -38,3 +38,15 @@ export async function appUsageReport(req: Request, res: Response, next: NextFunc
     next(err);
   }
 }
+
+export async function employeeEarningsReport(req: Request, res: Response, next: NextFunction) {
+  try {
+    const data = await reportService.getEmployeeEarningsReport(req.user!.orgId, {
+      from: req.query.from as string,
+      to: req.query.to as string,
+    });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}

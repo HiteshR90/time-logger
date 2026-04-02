@@ -24,3 +24,10 @@ reportRoutes.get(
   requireRole("owner", "manager"),
   reportController.appUsageReport,
 );
+
+reportRoutes.get(
+  "/employee-earnings",
+  requireAuth,
+  requireRole("owner"),
+  reportController.employeeEarningsReport,
+);
