@@ -5,12 +5,14 @@ export async function getActivityReport(
   orgId: string,
   filters: { userId?: string; from: string; to: string },
 ) {
+  const toDate = new Date(filters.to);
+  toDate.setHours(23, 59, 59, 999);
+
   const entries = await prisma.timeEntry.findMany({
     where: {
       project: { orgId },
       ...(filters.userId ? { userId: filters.userId } : {}),
-      startTime: { gte: new Date(filters.from) },
-      endTime: { lte: new Date(filters.to) },
+      startTime: { gte: new Date(filters.from), lte: toDate },
     },
     include: {
       user: { select: { id: true, name: true } },
@@ -50,11 +52,13 @@ export async function getTimeByProjectReport(
   orgId: string,
   filters: { from: string; to: string },
 ) {
+  const toDate = new Date(filters.to);
+  toDate.setHours(23, 59, 59, 999);
+
   const entries = await prisma.timeEntry.findMany({
     where: {
       project: { orgId },
-      startTime: { gte: new Date(filters.from) },
-      endTime: { lte: new Date(filters.to) },
+      startTime: { gte: new Date(filters.from), lte: toDate },
     },
     include: {
       project: { select: { id: true, name: true } },
@@ -80,13 +84,15 @@ export async function getAppUsageReport(
   orgId: string,
   filters: { userId?: string; from: string; to: string },
 ) {
+  const toDate = new Date(filters.to);
+  toDate.setHours(23, 59, 59, 999);
+
   const logs = await prisma.appUsageLog.findMany({
     where: {
       timeEntry: {
         project: { orgId },
         ...(filters.userId ? { userId: filters.userId } : {}),
-        startTime: { gte: new Date(filters.from) },
-        endTime: { lte: new Date(filters.to) },
+        startTime: { gte: new Date(filters.from), lte: toDate },
       },
     },
   });
