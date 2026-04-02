@@ -42,11 +42,13 @@ export default function MembersPage() {
     return u.role === "employee" || u.id === currentUser?.id;
   }) || [];
 
-  // Only owners can edit employee details
+  // Owner: can edit everyone except themselves
+  // Manager: can edit employees only
   const canEdit = (u: any) => {
-    if (!isOwner) return false;
     if (u.id === currentUser?.id) return false;
-    return true;
+    if (isOwner) return true;
+    if (currentUser?.role === "manager") return u.role === "employee";
+    return false;
   };
 
   const assignableRoles = isOwner ? ALL_ROLES : (["employee", "manager"] as const);
