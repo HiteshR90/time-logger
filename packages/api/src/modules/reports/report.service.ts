@@ -97,16 +97,34 @@ export async function getAppUsageReport(
     },
   });
 
-  const byApp: Record<string, { app: string; totalSeconds: number; category: string }> = {};
+  const byApp: Record<string, {
+    app: string;
+    totalSeconds: number;
+    category: string;
+    details: Record<string, { title: string; url: string | null; totalSeconds: number }>;
+  }> = {};
 
   for (const log of logs) {
     if (!byApp[log.app]) {
-      byApp[log.app] = { app: log.app, totalSeconds: 0, category: log.category };
+      byApp[log.app] = { app: log.app, totalSeconds: 0, category: log.category, details: {} };
     }
     byApp[log.app].totalSeconds += log.durationSec;
+
+    // Aggregate by title for detail view
+    const titleKey = log.title || "(untitled)";
+    if (!byApp[log.app].details[titleKey]) {
+      byApp[log.app].details[titleKey] = { title: titleKey, url: log.url, totalSeconds: 0 };
+    }
+    byApp[log.app].details[titleKey].totalSeconds += log.durationSec;
   }
 
   return Object.values(byApp)
-    .map((a) => ({ ...a, totalHours: secondsToHours(a.totalSeconds) }))
+    .map((a) => ({
+      ...a,
+      totalHours: secondsToHours(a.totalSeconds),
+      details: Object.values(a.details)
+        .map((d) => ({ ...d, totalHours: secondsToHours(d.totalSeconds) }))
+        .sort((x, y) => y.totalSeconds - x.totalSeconds),
+    }))
     .sort((a, b) => b.totalSeconds - a.totalSeconds);
 }

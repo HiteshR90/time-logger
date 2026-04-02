@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { X, Globe, MessageSquare, FileText } from "lucide-react";
+import { formatDuration } from "@time-tracker/shared";
 
 const COLORS = { productive: "#22c55e", neutral: "#eab308", unproductive: "#ef4444" };
 
@@ -13,6 +15,7 @@ export default function AppUsagePage() {
     return d.toISOString().split("T")[0];
   });
   const [to, setTo] = useState(() => new Date().toISOString().split("T")[0]);
+  const [selectedApp, setSelectedApp] = useState<any>(null);
 
   const { data: users } = useQuery({
     queryKey: ["users"],
@@ -34,7 +37,7 @@ export default function AppUsagePage() {
   }, {});
   const categoryData = Object.entries(categoryTotals).map(([name, value]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
-    value: Math.round((value as number) * 10) / 10,
+    value: Math.round((value as number) * 100) / 100,
     color: COLORS[name as keyof typeof COLORS] || "#94a3b8",
   }));
 
@@ -65,45 +68,128 @@ export default function AppUsagePage() {
           </ul>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-            <h2 className="text-lg font-semibold mb-4">Hours by App</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={apps.slice(0, 10)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis type="number" stroke="#94a3b8" />
-                <YAxis dataKey="app" type="category" width={100} stroke="#94a3b8" fontSize={12} />
-                <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "8px" }} />
-                <Bar dataKey="totalHours" name="Hours" radius={4}>
-                  {apps.slice(0, 10).map((entry: any, i: number) => (
-                    <Cell key={i} fill={COLORS[entry.category as keyof typeof COLORS] || "#94a3b8"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+              <h2 className="text-lg font-semibold mb-4">Hours by App</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={apps.slice(0, 10)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis type="number" stroke="#94a3b8" />
+                  <YAxis dataKey="app" type="category" width={100} stroke="#94a3b8" fontSize={12} />
+                  <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "8px" }} />
+                  <Bar dataKey="totalHours" name="Hours" radius={4} cursor="pointer"
+                    onClick={(data: any) => setSelectedApp(apps.find((a: any) => a.app === data.app))}>
+                    {apps.slice(0, 10).map((entry: any, i: number) => (
+                      <Cell key={i} fill={COLORS[entry.category as keyof typeof COLORS] || "#94a3b8"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-slate-500 mt-2">Click a bar to see window/URL details</p>
+            </div>
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+              <h2 className="text-lg font-semibold mb-4">Productivity Breakdown</h2>
+              {categoryData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                        {categoryData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "8px" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center gap-6 mt-2">
+                    {categoryData.map((c) => (
+                      <div key={c.name} className="flex items-center gap-2 text-sm">
+                        <div className="w-3 h-3 rounded-full" style={{ background: c.color }} />
+                        <span className="text-slate-400">{c.name}: {c.value}h</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : <p className="text-slate-500 text-center py-12">No category data</p>}
+            </div>
           </div>
-          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-            <h2 className="text-lg font-semibold mb-4">Productivity Breakdown</h2>
-            {categoryData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
-                      {categoryData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "8px" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex justify-center gap-6 mt-2">
-                  {categoryData.map((c) => (
-                    <div key={c.name} className="flex items-center gap-2 text-sm">
-                      <div className="w-3 h-3 rounded-full" style={{ background: c.color }} />
-                      <span className="text-slate-400">{c.name}: {c.value}h</span>
+
+          {/* App detail table */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-700/50">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-slate-300">App</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-300">Time</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-300">Category</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-300">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apps.map((app: any) => (
+                  <tr key={app.app} className="border-t border-slate-700 cursor-pointer hover:bg-slate-700/30"
+                    onClick={() => setSelectedApp(selectedApp?.app === app.app ? null : app)}>
+                    <td className="px-4 py-3 font-medium">{app.app}</td>
+                    <td className="px-4 py-3">{formatDuration(app.totalSeconds)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        app.category === "productive" ? "bg-green-900/50 text-green-400" :
+                        app.category === "unproductive" ? "bg-red-900/50 text-red-400" :
+                        "bg-yellow-900/50 text-yellow-400"
+                      }`}>{app.category}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">
+                      {app.details?.length || 0} window{app.details?.length !== 1 ? "s" : ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Detail panel */}
+      {selectedApp && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedApp(null)}>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-2xl max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <div>
+                <h2 className="text-xl font-bold">{selectedApp.app}</h2>
+                <p className="text-sm text-slate-400">
+                  {formatDuration(selectedApp.totalSeconds)} total —
+                  <span className={`ml-1 ${
+                    selectedApp.category === "productive" ? "text-green-400" :
+                    selectedApp.category === "unproductive" ? "text-red-400" : "text-yellow-400"
+                  }`}>{selectedApp.category}</span>
+                </p>
+              </div>
+              <button onClick={() => setSelectedApp(null)} className="p-1 hover:bg-slate-700 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <h3 className="text-sm font-medium text-slate-400 mb-3">Window / Page Details</h3>
+              <div className="space-y-2">
+                {selectedApp.details?.map((detail: any, i: number) => (
+                  <div key={i} className="flex items-start gap-3 px-3 py-2.5 bg-slate-900/50 rounded-lg">
+                    <div className="mt-0.5">
+                      {detail.url ? <Globe size={14} className="text-blue-400" /> :
+                       selectedApp.app.toLowerCase().includes("slack") || selectedApp.app.toLowerCase().includes("telegram") ?
+                       <MessageSquare size={14} className="text-purple-400" /> :
+                       <FileText size={14} className="text-slate-500" />}
                     </div>
-                  ))}
-                </div>
-              </>
-            ) : <p className="text-slate-500 text-center py-12">No category data</p>}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate" title={detail.title}>{detail.title}</p>
+                      {detail.url && <p className="text-xs text-blue-400 truncate">{detail.url}</p>}
+                    </div>
+                    <span className="text-xs text-slate-400 whitespace-nowrap">{formatDuration(detail.totalSeconds)}</span>
+                  </div>
+                ))}
+                {(!selectedApp.details || selectedApp.details.length === 0) && (
+                  <p className="text-slate-500 text-sm text-center py-4">No detail data available</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
