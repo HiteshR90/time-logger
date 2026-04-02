@@ -13,6 +13,8 @@ export default function ProjectDetailPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [hourlyRate, setHourlyRate] = useState("50");
   const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [editingRateUserId, setEditingRateUserId] = useState<string | null>(null);
+  const [editRate, setEditRate] = useState("");
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", id],
@@ -42,6 +44,15 @@ export default function ProjectDetailPage() {
   const removeMemberMutation = useMutation({
     mutationFn: (userId: string) => apiFetch(`/projects/${id}/members/${userId}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project", id] }),
+  });
+
+  const updateRateMutation = useMutation({
+    mutationFn: (data: { userId: string; hourlyRate: number }) =>
+      apiFetch(`/projects/${id}/members`, { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      setEditingRateUserId(null);
+    },
   });
 
   const updateProjectMutation = useMutation({
@@ -145,7 +156,26 @@ export default function ProjectDetailPage() {
                   {m.user?.name}
                 </td>
                 <td className="px-4 py-3 text-slate-400">{m.user?.email}</td>
-                {project.budgetType === "hourly" && <td className="px-4 py-3">${m.hourlyRate}/hr</td>}
+                {project.budgetType === "hourly" && (
+                  <td className="px-4 py-3">
+                    {editingRateUserId === m.userId ? (
+                      <form onSubmit={(e) => { e.preventDefault(); updateRateMutation.mutate({ userId: m.userId, hourlyRate: Number(editRate) }); }}
+                        className="flex items-center gap-1">
+                        <span className="text-slate-500">$</span>
+                        <input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)}
+                          min="0" step="0.01" autoFocus
+                          className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm" />
+                        <button type="submit" className="px-2 py-1 bg-blue-600 rounded text-xs">Save</button>
+                        <button type="button" onClick={() => setEditingRateUserId(null)} className="px-2 py-1 bg-slate-600 rounded text-xs">Cancel</button>
+                      </form>
+                    ) : (
+                      <button onClick={() => { setEditingRateUserId(m.userId); setEditRate(String(m.hourlyRate)); }}
+                        className="hover:bg-slate-700 px-2 py-1 rounded text-sm" title="Click to edit rate">
+                        ${m.hourlyRate}/hr
+                      </button>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <button onClick={() => removeMemberMutation.mutate(m.userId)}
                     className="p-1 hover:bg-red-900/30 rounded" title="Remove">
