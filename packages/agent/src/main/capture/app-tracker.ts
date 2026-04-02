@@ -104,8 +104,11 @@ export function startAppTracking(intervalMs: number = 2000) {
         durationSec: 0,
         category: categorize(appName, title),
       };
-    } catch {
-      // Silently handle permission errors
+    } catch (err) {
+      if (!noPermissionLogged) {
+        console.error("[app-tracker] Error detecting active window:", err);
+        noPermissionLogged = true;
+      }
     }
   }, intervalMs);
 }
@@ -126,5 +129,8 @@ export function getAndResetAppSessions(): AppSession[] {
 
   const sessions = [...appSessions];
   appSessions = [];
+  if (sessions.length > 0) {
+    console.log("[app-tracker] Returning", sessions.length, "sessions:", sessions.map(s => s.app).join(", "));
+  }
   return sessions;
 }
