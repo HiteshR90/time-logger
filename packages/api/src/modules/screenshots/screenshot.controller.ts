@@ -1,4 +1,7 @@
 import { Request, Response, NextFunction } from "express";
+import fs from "fs";
+import { getParam } from "../../middleware/params";
+import { prisma } from "../../config/prisma";
 import * as screenshotService from "./screenshot.service";
 
 export async function getPresignedUrl(req: Request, res: Response, next: NextFunction) {
@@ -33,6 +36,25 @@ export async function list(req: Request, res: Response, next: NextFunction) {
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     });
     res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function serveFile(req: Request, res: Response, next: NextFunction) {
+  try {
+    const ss = await prisma.screenshot.findUnique({ where: { id: getParam(req, "id") } });
+    if (!ss || !ss.s3Key.startsWith("local://")) {
+      res.status(404).json({ success: false, error: "Not found" });
+      return;
+    }
+    const filePath = ss.s3Key.replace("local://", "");
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({ success: false, error: "File not found" });
+      return;
+    }
+    res.setHeader("Content-Type", "image/jpeg");
+    fs.createReadStream(filePath).pipe(res);
   } catch (err) {
     next(err);
   }

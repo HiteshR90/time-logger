@@ -12,6 +12,7 @@ let currentProjectId: string | null = null;
 let currentUserId: string | null = null;
 let screenshotIntervalMin: number = DEFAULTS.SCREENSHOT_INTERVAL_MIN;
 let blurScreenshots: boolean = false;
+let pendingScreenshots: Array<{ s3Key: string }> = [];
 
 export function configure(opts: {
   userId: string;
@@ -44,7 +45,7 @@ async function syncOnce() {
     timestamp: new Date().toISOString(),
     userId: currentUserId,
     projectId: currentProjectId,
-    screenshots: [] as Array<{ s3Key: string }>,
+    screenshots: [...pendingScreenshots],
     keystrokes: inputStats.keystrokes,
     mouseClicks: inputStats.mouseClicks,
     mouseDistancePx: inputStats.mouseDistancePx,
@@ -64,7 +65,8 @@ async function syncOnce() {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    console.log("[sync] Activity synced successfully");
+    console.log("[sync] Activity synced successfully, screenshots:", pendingScreenshots.length);
+    pendingScreenshots = [];
 
     // Also drain offline queue
     await drainOfflineQueue();
@@ -85,6 +87,7 @@ async function takeScreenshot() {
   try {
     console.log("[screenshot] Capturing...");
     const result = await captureScreenshot(blurScreenshots);
+    pendingScreenshots.push({ s3Key: result.s3Key });
     console.log("[screenshot] Captured:", result.s3Key);
   } catch (err) {
     console.error("[screenshot] Failed:", err);

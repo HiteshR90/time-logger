@@ -72,15 +72,28 @@ export async function listScreenshots(
     prisma.screenshot.count({ where }),
   ]);
 
-  // Generate download URLs
+  // Generate download URLs (handle local:// and s3 keys)
   const withUrls = await Promise.all(
-    screenshots.map(async (ss) => ({
-      ...ss,
-      downloadUrl: await s3Service.generatePresignedDownloadUrl(ss.s3Key),
-      thumbnailUrl: ss.thumbnailKey
-        ? await s3Service.generatePresignedDownloadUrl(ss.thumbnailKey)
-        : null,
-    })),
+    screenshots.map(async (ss) => {
+      let downloadUrl: string | null = null;
+      let thumbnailUrl: string | null = null;
+
+      if (ss.s3Key.startsWith("local://")) {
+        // Local file — serve via /screenshots/file endpoint
+        downloadUrl = `/screenshots/file/${ss.id}`;
+      } else {
+        try {
+          downloadUrl = await s3Service.generatePresignedDownloadUrl(ss.s3Key);
+          thumbnailUrl = ss.thumbnailKey
+            ? await s3Service.generatePresignedDownloadUrl(ss.thumbnailKey)
+            : null;
+        } catch {
+          downloadUrl = null;
+        }
+      }
+
+      return { ...ss, downloadUrl, thumbnailUrl };
+    }),
   );
 
   return { screenshots: withUrls, total, page, limit };

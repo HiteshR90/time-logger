@@ -26,3 +26,9 @@ screenshotRoutes.get(
   requireRole("owner", "manager"),
   screenshotController.list,
 );
+
+// Serve local screenshot files — accepts token via query param (for <img> tags)
+screenshotRoutes.get(
+  "/file/:id",
+  screenshotController.serveFile,
+);

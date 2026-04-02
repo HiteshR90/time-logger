@@ -1,8 +1,19 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api-client";
+import { apiFetch, getAccessToken } from "@/lib/api-client";
 import { Camera, X } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5080";
+
+function screenshotUrl(url: string | null): string | null {
+  if (!url) return null;
+  // Local file URLs are relative to the API
+  if (url.startsWith("/screenshots/file/")) {
+    return `${API_BASE}${url}?token=${getAccessToken()}`;
+  }
+  return url;
+}
 
 export default function ScreenshotsPage() {
   const [selectedUser, setSelectedUser] = useState("");
@@ -37,9 +48,9 @@ export default function ScreenshotsPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {screenshots.map((ss: any) => (
           <div key={ss.id} className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden cursor-pointer hover:border-blue-500 transition-colors"
-            onClick={() => setExpandedImg(ss.downloadUrl)}>
-            {ss.thumbnailUrl || ss.downloadUrl ? (
-              <img src={ss.thumbnailUrl || ss.downloadUrl} alt="Screenshot" className="w-full aspect-video object-cover" />
+            onClick={() => setExpandedImg(screenshotUrl(ss.downloadUrl))}>
+            {screenshotUrl(ss.thumbnailUrl || ss.downloadUrl) ? (
+              <img src={screenshotUrl(ss.thumbnailUrl || ss.downloadUrl)!} alt="Screenshot" className="w-full aspect-video object-cover" />
             ) : (
               <div className="w-full aspect-video bg-slate-900 flex items-center justify-center">
                 <Camera className="text-slate-700" size={24} />
