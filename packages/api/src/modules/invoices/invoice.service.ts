@@ -20,18 +20,17 @@ export async function generateInvoice(orgId: string, input: GenerateInvoiceInput
   const projectIds = client.projects.map((p) => p.id);
   if (projectIds.length === 0) throw new AppError(400, "Client has no projects");
 
-  // Check for duplicate: same client + overlapping date range
-  const fromDate = new Date(input.fromDate);
+  // Check for duplicate: same client + exact same date range
   const existing = await prisma.invoice.findFirst({
     where: {
       orgId,
       clientId: input.clientId,
-      fromDate: { lte: new Date(input.toDate) },
-      toDate: { gte: fromDate },
+      fromDate: new Date(input.fromDate),
+      toDate: new Date(input.toDate),
     },
   });
   if (existing) {
-    throw new AppError(409, `Invoice already exists for this client and period (${existing.invoiceNumber}). Delete or edit the existing one.`);
+    throw new AppError(409, `Invoice "${existing.invoiceNumber}" already exists for this client and exact period. Delete it first or choose different dates.`);
   }
 
   // Ensure toDate includes the entire end day
@@ -183,4 +182,12 @@ export async function updateInvoiceStatus(orgId: string, id: string, input: Upda
     where: { id },
     data: { status: input.status },
   });
+}
+
+export async function deleteInvoice(orgId: string, id: string) {
+  const invoice = await prisma.invoice.findFirst({ where: { id, orgId } });
+  if (!invoice) throw new AppError(404, "Invoice not found");
+  if (invoice.status === "paid") throw new AppError(400, "Cannot delete a paid invoice");
+
+  return prisma.invoice.delete({ where: { id } });
 }

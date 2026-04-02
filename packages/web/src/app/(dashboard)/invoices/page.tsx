@@ -20,6 +20,11 @@ export default function InvoicesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/invoices/${id}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["invoices"] }),
+  });
+
   const viewInvoice = async (id: string) => {
     const data = await apiFetch(`/invoices/${id}`);
     setViewingInvoice(data);
@@ -118,6 +123,12 @@ export default function InvoicesPage() {
                       <button onClick={() => statusMutation.mutate({ id: inv.id, status: "paid" })}
                         className="p-1 hover:bg-green-900/30 rounded" title="Mark as Paid">
                         <CheckCircle size={14} className="text-green-400" />
+                      </button>
+                    )}
+                    {inv.status !== "paid" && (
+                      <button onClick={() => { if (confirm(`Delete invoice ${inv.invoiceNumber}?`)) deleteMutation.mutate(inv.id); }}
+                        className="p-1 hover:bg-red-900/30 rounded" title="Delete">
+                        <X size={14} className="text-red-400" />
                       </button>
                     )}
                   </div>

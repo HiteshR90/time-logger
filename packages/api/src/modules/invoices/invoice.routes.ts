@@ -10,3 +10,4 @@ invoiceRoutes.get("/:id", requireAuth, requirePermission("invoices.view"), invoi
 invoiceRoutes.post("/generate", requireAuth, requirePermission("invoices.manage"), validate(GenerateInvoiceSchema), invoiceController.generate);
 invoiceRoutes.patch("/:id", requireAuth, requirePermission("invoices.manage"), validate(UpdateInvoiceSchema), invoiceController.update);
 invoiceRoutes.patch("/:id/status", requireAuth, requirePermission("invoices.manage"), validate(UpdateInvoiceStatusSchema), invoiceController.updateStatus);
+invoiceRoutes.delete("/:id", requireAuth, requirePermission("invoices.manage"), invoiceController.remove);

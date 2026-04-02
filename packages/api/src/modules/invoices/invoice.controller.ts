@@ -46,3 +46,12 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     next(err);
   }
 }
+
+export async function remove(req: Request, res: Response, next: NextFunction) {
+  try {
+    await invoiceService.deleteInvoice(req.user!.orgId, getParam(req, "id"));
+    res.json({ success: true, data: null });
+  } catch (err) {
+    next(err);
+  }
+}
