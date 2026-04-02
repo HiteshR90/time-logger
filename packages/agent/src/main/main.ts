@@ -1,15 +1,5 @@
 import { app, BrowserWindow, ipcMain, systemPreferences, shell, dialog } from "electron";
 import path from "path";
-import Module from "module";
-
-// Add native_modules to module search path for packaged app
-const nativeModulesPath = path.join(__dirname, "..", "native_modules");
-const originalResolvePaths = (Module as any)._nodeModulePaths;
-(Module as any)._nodeModulePaths = function (from: string) {
-  const paths = originalResolvePaths.call(this, from);
-  paths.unshift(nativeModulesPath);
-  return paths;
-};
 import { startInputTracking, stopInputTracking } from "./capture/input-tracker";
 import { startAppTracking, stopAppTracking, setCategoryRules } from "./capture/app-tracker";
 import { startIdleDetection, stopIdleDetection, setIdleTimeout, onIdle } from "./capture/idle-detector";

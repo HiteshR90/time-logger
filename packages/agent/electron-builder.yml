@@ -12,7 +12,7 @@ extraMetadata:
   main: out/main/main.js
 asar: true
 asarUnpack:
-  - "native_modules/**/*.node"
+  - "native_modules/**/*"
 npmRebuild: false
 mac:
   category: public.app-category.productivity
