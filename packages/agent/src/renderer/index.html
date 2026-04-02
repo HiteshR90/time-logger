@@ -72,7 +72,10 @@
 
       const $ = (id) => document.getElementById(id);
 
-      // Direct API calls (no IPC needed)
+      // IPC for main process communication (tracking start/stop)
+      const { ipcRenderer } = require('electron');
+
+      // Direct API calls for auth/data
       async function apiCall(path, options = {}) {
         const headers = { 'Content-Type': 'application/json', ...options.headers };
         if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
@@ -126,7 +129,10 @@
             accessToken = result.data.accessToken;
             localStorage.setItem('agent_token', accessToken);
             localStorage.setItem('agent_refresh', result.data.refreshToken);
+            localStorage.setItem('agent_user', JSON.stringify(result.data.user));
             currentUser = result.data.user;
+            // Pass tokens to main process for API calls (screenshots, sync)
+            await ipcRenderer.invoke('auth:set-tokens', accessToken, result.data.refreshToken);
             $('user-info').textContent = `Logged in as ${currentUser.name}`;
             showScreen('tracker');
             loadProjects();
@@ -143,10 +149,18 @@
         $('login-btn').disabled = false;
       });
 
-      // Start tracking
-      $('start-btn').addEventListener('click', () => {
+      // Start tracking — triggers main process sync via IPC
+      $('start-btn').addEventListener('click', async () => {
         const projectId = $('project-select').value;
         if (!projectId) return alert('Select a project first');
+
+        // Tell main process to start monitoring (screenshots, input, app tracking, sync)
+        const result = await ipcRenderer.invoke('tracking:start', currentUser.id, projectId);
+        if (!result.success) {
+          $('tracking-status').textContent = 'Failed to start: ' + (result.error || 'unknown');
+          return;
+        }
+
         tracking = true;
         timerSeconds = 0;
         timerInterval = setInterval(() => { timerSeconds++; updateTimer(); }, 1000);
@@ -156,8 +170,9 @@
         $('tracking-status').textContent = 'Tracking...';
       });
 
-      // Stop tracking
-      $('stop-btn').addEventListener('click', () => {
+      // Stop tracking — stops main process sync
+      $('stop-btn').addEventListener('click', async () => {
+        await ipcRenderer.invoke('tracking:stop');
         tracking = false;
         clearInterval(timerInterval);
         $('start-btn').classList.remove('hidden');
@@ -167,8 +182,8 @@
       });
 
       // Logout
-      $('logout-btn').addEventListener('click', () => {
-        if (tracking) { tracking = false; clearInterval(timerInterval); }
+      $('logout-btn').addEventListener('click', async () => {
+        if (tracking) { await ipcRenderer.invoke('tracking:stop'); tracking = false; clearInterval(timerInterval); }
         accessToken = null;
         currentUser = null;
         localStorage.removeItem('agent_token');
@@ -178,6 +193,10 @@
 
       // Check if already logged in
       if (accessToken) {
+        // Pass stored tokens to main process
+        const storedRefresh = localStorage.getItem('agent_refresh');
+        if (storedRefresh) ipcRenderer.invoke('auth:set-tokens', accessToken, storedRefresh);
+
         apiCall('/organizations/me').then(result => {
           if (result.success) {
             const stored = localStorage.getItem('agent_user');

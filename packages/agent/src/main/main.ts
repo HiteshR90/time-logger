@@ -19,7 +19,7 @@ function createWindow() {
     show: true,
     webPreferences: {
       contextIsolation: false,
-      nodeIntegration: false,
+      nodeIntegration: true,
       sandbox: false,
     },
   });
@@ -77,6 +77,11 @@ ipcMain.handle("auth:logout", () => {
 
 ipcMain.handle("auth:check", () => {
   return { loggedIn: !!getAccessToken() };
+});
+
+ipcMain.handle("auth:set-tokens", (_e, access: string, refresh: string) => {
+  setTokens(access, refresh);
+  return { success: true };
 });
 
 ipcMain.handle("projects:list", async () => {
