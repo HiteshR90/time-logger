@@ -102,7 +102,7 @@ export default function ProjectDetailPage() {
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 mb-4">
           <form onSubmit={(e) => {
             e.preventDefault();
-            addMemberMutation.mutate({ userId: selectedUserId, hourlyRate: Number(hourlyRate) });
+            addMemberMutation.mutate({ userId: selectedUserId, hourlyRate: project.budgetType === "hourly" ? Number(hourlyRate) : 0 });
           }} className="flex gap-3 items-end">
             <div className="flex-1">
               <label className="block text-xs text-slate-400 mb-1">Employee</label>
@@ -114,11 +114,13 @@ export default function ProjectDetailPage() {
                 ))}
               </select>
             </div>
-            <div className="w-32">
-              <label className="block text-xs text-slate-400 mb-1">Rate ($/hr)</label>
-              <input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} min="0" step="0.01"
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
-            </div>
+            {project.budgetType === "hourly" && (
+              <div className="w-32">
+                <label className="block text-xs text-slate-400 mb-1">Rate ($/hr)</label>
+                <input type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} min="0" step="0.01"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
+              </div>
+            )}
             <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Add</button>
             <button type="button" onClick={() => setShowAddMember(false)} className="px-4 py-2 bg-slate-700 rounded-lg text-sm">Cancel</button>
           </form>
@@ -131,7 +133,7 @@ export default function ProjectDetailPage() {
             <tr>
               <th className="text-left px-4 py-3 font-medium text-slate-300">Name</th>
               <th className="text-left px-4 py-3 font-medium text-slate-300">Email</th>
-              <th className="text-left px-4 py-3 font-medium text-slate-300">Hourly Rate</th>
+              {project.budgetType === "hourly" && <th className="text-left px-4 py-3 font-medium text-slate-300">Hourly Rate</th>}
               <th className="text-left px-4 py-3 font-medium text-slate-300">Actions</th>
             </tr>
           </thead>
@@ -143,7 +145,7 @@ export default function ProjectDetailPage() {
                   {m.user?.name}
                 </td>
                 <td className="px-4 py-3 text-slate-400">{m.user?.email}</td>
-                <td className="px-4 py-3">${m.hourlyRate}/hr</td>
+                {project.budgetType === "hourly" && <td className="px-4 py-3">${m.hourlyRate}/hr</td>}
                 <td className="px-4 py-3">
                   <button onClick={() => removeMemberMutation.mutate(m.userId)}
                     className="p-1 hover:bg-red-900/30 rounded" title="Remove">
@@ -153,7 +155,7 @@ export default function ProjectDetailPage() {
               </tr>
             ))}
             {!project.members?.length && (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-500">No members assigned. Click &quot;Add Member&quot; above.</td></tr>
+              <tr><td colSpan={project.budgetType === "hourly" ? 4 : 3} className="px-4 py-8 text-center text-slate-500">No members assigned. Click &quot;Add Member&quot; above.</td></tr>
             )}
           </tbody>
         </table>
