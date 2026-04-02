@@ -33,6 +33,13 @@ authRoutes.post(
   authController.refresh,
 );
 
+authRoutes.get(
+  "/pending-invites",
+  requireAuth,
+  requireRole("owner", "manager"),
+  authController.listPendingInvites,
+);
+
 authRoutes.post(
   "/invite",
   requireAuth,

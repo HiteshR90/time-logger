@@ -45,6 +45,15 @@ export async function invite(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export async function listPendingInvites(req: Request, res: Response, next: NextFunction) {
+  try {
+    const invites = await authService.listPendingInvites(req.user!.orgId);
+    res.json({ success: true, data: invites });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function acceptInvite(
   req: Request,
   res: Response,

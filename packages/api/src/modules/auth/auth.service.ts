@@ -176,7 +176,15 @@ export async function inviteMember(orgId: string, input: InviteMemberInput) {
     },
   });
 
-  return { inviteToken: token, email: input.email };
+  return { inviteToken: token, email: input.email, name: input.name, role: input.role };
+}
+
+export async function listPendingInvites(orgId: string) {
+  return prisma.inviteToken.findMany({
+    where: { orgId, expiresAt: { gt: new Date() } },
+    select: { id: true, email: true, name: true, role: true, createdAt: true, expiresAt: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export async function acceptInvite(input: AcceptInviteInput) {

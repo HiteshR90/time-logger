@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
-import { UserPlus, Shield, ShieldCheck, Pencil, X } from "lucide-react";
+import { UserPlus, Shield, ShieldCheck, Pencil, X, Clock, Mail } from "lucide-react";
 
 const SCREENSHOT_OPTIONS = [
   { value: "", label: "Use default" },
@@ -13,6 +13,8 @@ const SCREENSHOT_OPTIONS = [
   { value: "-1", label: "Random" },
   { value: "disabled", label: "Disabled" },
 ];
+
+const ALL_ROLES = ["employee", "manager", "owner"] as const;
 
 export default function MembersPage() {
   const queryClient = useQueryClient();
@@ -37,6 +39,11 @@ export default function MembersPage() {
     queryFn: () => apiFetch("/users"),
   });
 
+  const { data: pendingInvites } = useQuery({
+    queryKey: ["pending-invites"],
+    queryFn: () => apiFetch("/auth/pending-invites"),
+  });
+
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: () => apiFetch("/departments"),
@@ -46,6 +53,7 @@ export default function MembersPage() {
     mutationFn: (data: any) => apiFetch("/auth/invite", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
       setShowInvite(false);
       setInvEmail("");
       setInvName("");
@@ -94,7 +102,6 @@ export default function MembersPage() {
       monitoringSettings.screenshotEnabled = true;
       monitoringSettings.screenshotIntervalMin = Number(editScreenshot);
     }
-
     updateMutation.mutate({
       id: userId,
       data: {
@@ -141,12 +148,17 @@ export default function MembersPage() {
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">Role</label>
-              <select value={invRole} onChange={(e) => setInvRole(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm">
-                <option value="employee">Employee</option>
-                <option value="manager">Manager</option>
-              </select>
+              <label className="block text-sm text-slate-400 mb-2">Roles</label>
+              <div className="flex gap-4">
+                {ALL_ROLES.map((r) => (
+                  <label key={r} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="invRole" value={r} checked={invRole === r}
+                      onChange={(e) => setInvRole(e.target.value)}
+                      className="w-4 h-4 bg-slate-700 border-slate-600" />
+                    <span className="capitalize">{r}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-sm text-slate-400 mb-1">Department</label>
@@ -178,6 +190,31 @@ export default function MembersPage() {
         </div>
       )}
 
+      {/* Pending Invites */}
+      {pendingInvites?.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+            <Clock size={14} /> Pending Invitations ({pendingInvites.length})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {pendingInvites.map((inv: any) => (
+              <div key={inv.id} className="bg-slate-800/50 rounded-lg border border-dashed border-slate-600 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Mail size={14} className="text-yellow-400" />
+                  <span className="font-medium text-sm">{inv.name}</span>
+                </div>
+                <p className="text-xs text-slate-400">{inv.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-900/50 text-yellow-400">Pending</span>
+                  <span className="text-xs text-slate-500 capitalize">{inv.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Active Members Table */}
       <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-700/50">
@@ -199,12 +236,16 @@ export default function MembersPage() {
                     <td className="px-4 py-3 font-medium">{user.name}</td>
                     <td className="px-4 py-3 text-slate-400">{user.email}</td>
                     <td className="px-4 py-3">
-                      <select value={editRole} onChange={(e) => setEditRole(e.target.value)}
-                        className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs">
-                        <option value="employee">Employee</option>
-                        <option value="manager">Manager</option>
-                        <option value="owner">Owner</option>
-                      </select>
+                      <div className="flex gap-2">
+                        {ALL_ROLES.map((r) => (
+                          <label key={r} className="flex items-center gap-1 text-xs cursor-pointer">
+                            <input type="radio" name="editRole" value={r} checked={editRole === r}
+                              onChange={(e) => setEditRole(e.target.value)}
+                              className="w-3 h-3" />
+                            <span className="capitalize">{r}</span>
+                          </label>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <select value={editDept} onChange={(e) => setEditDept(e.target.value)}
@@ -244,7 +285,7 @@ export default function MembersPage() {
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-1">
                         {user.role === "owner" ? <ShieldCheck size={14} className="text-yellow-400" /> : <Shield size={14} className="text-slate-500" />}
-                        {user.role}
+                        <span className="capitalize">{user.role}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-400">{user.department?.name || "—"}</td>
@@ -264,9 +305,6 @@ export default function MembersPage() {
                 )}
               </tr>
             ))}
-            {!users?.length && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">No members yet. Invite someone!</td></tr>
-            )}
           </tbody>
         </table>
       </div>
