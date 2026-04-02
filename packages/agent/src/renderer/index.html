@@ -55,6 +55,19 @@
           <button id="open-settings-btn" style="margin-top:6px;padding:6px 12px;background:#dc2626;color:white;border:none;border-radius:4px;font-size:12px;cursor:pointer;">Open System Settings</button>
         </div>
         <div id="user-info" class="status stopped"></div>
+
+        <!-- Today's summary -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px;text-align:center;">
+            <div style="font-size:11px;color:#94a3b8;">Today</div>
+            <div id="today-total" style="font-size:16px;font-weight:700;color:#3b82f6;">0h 0m</div>
+          </div>
+          <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px;text-align:center;">
+            <div style="font-size:11px;color:#94a3b8;">This Week</div>
+            <div id="week-total" style="font-size:16px;font-weight:700;color:#22c55e;">0h 0m</div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Project</label>
           <select id="project-select">
@@ -69,7 +82,14 @@
         <div id="tracking-status" class="status stopped">Not tracking</div>
         <button class="btn-primary" id="start-btn">Start Tracking</button>
         <button class="btn-danger hidden" id="stop-btn">Stop Tracking</button>
-        <button class="btn-secondary" id="logout-btn" style="margin-top: 16px;">Logout</button>
+
+        <!-- My Projects -->
+        <div id="my-projects" style="margin-top:16px;background:#1e293b;border-radius:6px;padding:10px;">
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">My Projects</div>
+          <div id="project-list" style="font-size:12px;color:#64748b;">Loading...</div>
+        </div>
+
+        <button class="btn-secondary" id="logout-btn" style="margin-top: 12px;">Logout</button>
       </div>
     </div>
 
@@ -107,18 +127,49 @@
         if (screen === 'tracker') checkPermission();
       }
 
+      function formatHM(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return `${h}h ${m}m`;
+      }
+
       async function loadProjects() {
         const result = await apiCall('/projects');
         if (result.success) {
           const select = $('project-select');
           select.innerHTML = '<option value="">Select a project...</option>';
+          const listEl = $('project-list');
+          listEl.innerHTML = '';
           result.data.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
             opt.textContent = p.name;
             select.appendChild(opt);
+            // Project list
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #334155;';
+            div.innerHTML = `<span style="color:#e2e8f0;">${p.name}</span><span style="color:#64748b;">${p.client?.name || 'No client'}</span>`;
+            listEl.appendChild(div);
           });
+          if (result.data.length === 0) listEl.textContent = 'No projects assigned';
         }
+      }
+
+      async function loadTodayStats() {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+          const result = await apiCall(`/timesheets?from=${today}T00:00:00Z&limit=100`);
+          if (result.success) {
+            const todaySec = (result.entries || []).reduce((s, e) => s + e.durationSec, 0);
+            $('today-total').textContent = formatHM(todaySec);
+          }
+          const weekResult = await apiCall(`/timesheets?from=${weekAgo}T00:00:00Z&limit=100`);
+          if (weekResult.success) {
+            const weekSec = (weekResult.entries || []).reduce((s, e) => s + e.durationSec, 0);
+            $('week-total').textContent = formatHM(weekSec);
+          }
+        } catch {}
       }
 
       // Login
@@ -148,6 +199,7 @@
             $('user-info').textContent = `Logged in as ${currentUser.name}`;
             showScreen('tracker');
             loadProjects();
+            loadTodayStats();
           } else {
             $('login-error').textContent = result.error || 'Login failed';
             $('login-error').classList.remove('hidden');
