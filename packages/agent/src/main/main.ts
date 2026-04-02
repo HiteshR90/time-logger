@@ -7,7 +7,7 @@ import { configure, startSync, stopSync } from "./sync/sync-service";
 import { fetchConfig, loadCachedConfig } from "./config/config-manager";
 import { destroyTray } from "./tray";
 import { closeDb } from "./sync/offline-queue";
-import { loadStoredTokens, setTokens, clearTokens, apiRequest, getAccessToken } from "./api-client";
+import { loadStoredTokens, setTokens, clearTokens, apiRequest, getAccessToken, refreshAccessToken, getStoredUser } from "./api-client";
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -78,9 +78,22 @@ ipcMain.handle("auth:check", () => {
   return { loggedIn: !!getAccessToken() };
 });
 
-ipcMain.handle("auth:set-tokens", (_e, access: string, refresh: string) => {
-  setTokens(access, refresh);
+ipcMain.handle("auth:set-tokens", (_e, access: string, refresh: string, user?: any) => {
+  setTokens(access, refresh, user);
   return { success: true };
+});
+
+ipcMain.handle("auth:get-stored-session", async () => {
+  // Try to restore session from stored refresh token
+  if (getAccessToken() && getStoredUser()) {
+    return { loggedIn: true, accessToken: getAccessToken(), user: getStoredUser() };
+  }
+  // Try refreshing
+  const refreshed = await refreshAccessToken();
+  if (refreshed && getStoredUser()) {
+    return { loggedIn: true, accessToken: getAccessToken(), user: getStoredUser() };
+  }
+  return { loggedIn: false };
 });
 
 ipcMain.handle("projects:list", async () => {
@@ -114,8 +127,11 @@ ipcMain.handle("tracking:stop", () => {
 });
 
 // App lifecycle
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   loadStoredTokens();
+  // Auto-refresh token on startup
+  const refreshed = await refreshAccessToken();
+  console.log("[auth] Startup refresh:", refreshed ? "success" : "no stored session");
   createWindow();
 });
 

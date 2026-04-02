@@ -6,24 +6,36 @@ const API_BASE = store.get("apiUrl", "http://localhost:5080") as string;
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
+let storedUser: any = null;
 
-export function setTokens(access: string, refresh: string) {
+export function setTokens(access: string, refresh: string, user?: any) {
   accessToken = access;
   refreshToken = refresh;
   store.set("refreshToken", refresh);
+  if (user) {
+    storedUser = user;
+    store.set("user", user);
+  }
 }
 
 export function loadStoredTokens() {
   refreshToken = store.get("refreshToken", null) as string | null;
+  storedUser = store.get("user", null) as any;
 }
 
 export function clearTokens() {
   accessToken = null;
   refreshToken = null;
+  storedUser = null;
   store.delete("refreshToken");
+  store.delete("user");
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+export function getStoredUser() {
+  return storedUser;
+}
+
+export async function refreshAccessToken(): Promise<boolean> {
   if (!refreshToken) return false;
   try {
     const res = await fetch(`${API_BASE}/auth/refresh`, {
@@ -58,7 +70,6 @@ export async function apiRequest(
 
   let res = await fetch(url, { ...options, headers });
 
-  // Try refresh on 401
   if (res.status === 401 && refreshToken) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
