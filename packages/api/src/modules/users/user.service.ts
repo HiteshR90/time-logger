@@ -13,6 +13,7 @@ export async function listUsers(orgId: string) {
       departmentId: true,
       avatarUrl: true,
       isActive: true,
+      yearlySalary: true,
       monitoringSettings: true,
       createdAt: true,
       department: { select: { id: true, name: true } },
@@ -32,6 +33,7 @@ export async function getUser(orgId: string, userId: string) {
       departmentId: true,
       avatarUrl: true,
       isActive: true,
+      yearlySalary: true,
       monitoringSettings: true,
       createdAt: true,
       department: { select: { id: true, name: true, monitoringSettings: true } },
@@ -56,6 +58,7 @@ export async function updateUser(
     departmentId?: string | null;
     name?: string;
     isActive?: boolean;
+    yearlySalary?: number | null;
     monitoringSettings?: Record<string, unknown> | null;
   },
 ) {
@@ -77,6 +80,10 @@ export async function updateUser(
   if (data.role === "owner" && callerRole !== "owner") {
     throw new AppError(403, "Only owners can assign the owner role");
   }
+  // Only owners can set/view salary
+  if (data.yearlySalary !== undefined && callerRole !== "owner") {
+    throw new AppError(403, "Only owners can set salary information");
+  }
 
   return prisma.user.update({
     where: { id: userId },
@@ -88,6 +95,7 @@ export async function updateUser(
       role: true,
       departmentId: true,
       isActive: true,
+      yearlySalary: true,
       monitoringSettings: true,
     },
   });

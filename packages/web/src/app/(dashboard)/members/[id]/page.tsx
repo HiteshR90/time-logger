@@ -31,6 +31,7 @@ export default function MemberEditPage() {
   const [departmentId, setDepartmentId] = useState("");
   const [screenshotSetting, setScreenshotSetting] = useState("");
   const [idleTimeout, setIdleTimeout] = useState("");
+  const [yearlySalary, setYearlySalary] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [saved, setSaved] = useState(false);
 
@@ -55,6 +56,7 @@ export default function MemberEditPage() {
       setRole(member.role);
       setDepartmentId(member.departmentId || "");
       setIsActive(member.isActive);
+      setYearlySalary(member.yearlySalary ? String(member.yearlySalary) : "");
 
       const ms = member.monitoringSettings as any;
       if (ms?.screenshotEnabled === false) setScreenshotSetting("disabled");
@@ -95,13 +97,17 @@ export default function MemberEditPage() {
       monitoringSettings.idleTimeoutMin = Number(idleTimeout);
     }
 
-    saveMutation.mutate({
+    const updateData: any = {
       name,
       role,
       departmentId: departmentId || null,
       isActive,
       monitoringSettings: Object.keys(monitoringSettings).length > 0 ? monitoringSettings : null,
-    });
+    };
+    if (isOwner) {
+      updateData.yearlySalary = yearlySalary ? Number(yearlySalary) : null;
+    }
+    saveMutation.mutate(updateData);
   };
 
   const assignableRoles = isOwner ? ALL_ROLES : ["employee", "manager"];
@@ -156,6 +162,27 @@ export default function MemberEditPage() {
             </div>
           </div>
         </div>
+
+        {/* Compensation — owner only */}
+        {isOwner && (
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Compensation</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-slate-400 mb-1">Yearly Salary</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-500 text-sm">$</span>
+                  <input type="number" value={yearlySalary} onChange={(e) => setYearlySalary(e.target.value)}
+                    placeholder="Not set" min="0" step="1000"
+                    className="w-full pl-7 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm" />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <p className="text-xs text-slate-500 pb-2">Only visible to organization owners. Not shown to managers or employees.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Monitoring Settings */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 mb-6">

@@ -35,6 +35,7 @@ model User {
   departmentId String?  @map("department_id")
   avatarUrl    String?  @map("avatar_url")
   isActive           Boolean  @default(true) @map("is_active")
+  yearlySalary       Float?   @map("yearly_salary")
   monitoringSettings Json?    @map("monitoring_settings")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")

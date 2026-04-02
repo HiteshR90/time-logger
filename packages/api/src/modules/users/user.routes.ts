@@ -10,6 +10,6 @@ userRoutes.get("/:id/monitoring-settings", requireAuth, userController.getMonito
 userRoutes.patch(
   "/:id",
   requireAuth,
-  requireRole("owner", "manager"),
+  requireRole("owner"),
   userController.updateUser,
 );
