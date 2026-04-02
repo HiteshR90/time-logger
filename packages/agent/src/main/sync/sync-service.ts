@@ -30,7 +30,11 @@ export function setActiveProject(projectId: string) {
 }
 
 async function syncOnce() {
-  if (!currentUserId || !currentProjectId) return;
+  if (!currentUserId || !currentProjectId) {
+    console.log("[sync] Skipped — no user/project set");
+    return;
+  }
+  console.log("[sync] Syncing activity data...");
 
   const inputStats = getAndResetStats();
   const appSessions = getAndResetAppSessions();
@@ -60,10 +64,12 @@ async function syncOnce() {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    console.log("[sync] Activity synced successfully");
 
     // Also drain offline queue
     await drainOfflineQueue();
-  } catch {
+  } catch (err) {
+    console.error("[sync] Activity sync failed:", err);
     // Save to offline queue
     offlineQueue.enqueue(payload);
     console.log("Queued payload offline, queue size:", offlineQueue.queueSize());
@@ -71,12 +77,17 @@ async function syncOnce() {
 }
 
 async function takeScreenshot() {
-  if (!currentUserId || !currentProjectId || getIsIdle()) return;
+  if (!currentUserId || !currentProjectId || getIsIdle()) {
+    console.log("[screenshot] Skipped — idle or no user/project");
+    return;
+  }
 
   try {
-    await captureScreenshot(blurScreenshots);
+    console.log("[screenshot] Capturing...");
+    const result = await captureScreenshot(blurScreenshots);
+    console.log("[screenshot] Captured:", result.s3Key);
   } catch (err) {
-    console.error("Screenshot failed:", err);
+    console.error("[screenshot] Failed:", err);
   }
 }
 
@@ -107,19 +118,25 @@ function getScreenshotIntervalMs(): number {
 export function startSync() {
   if (syncInterval) return;
 
-  // Activity sync every 60 seconds
+  console.log("[sync] Starting sync — interval:", DEFAULTS.ACTIVITY_SYNC_INTERVAL_SEC, "s, screenshot interval:", screenshotIntervalMin, "min");
+
+  // Run first sync immediately, then every 60 seconds
+  syncOnce();
   syncInterval = setInterval(syncOnce, DEFAULTS.ACTIVITY_SYNC_INTERVAL_SEC * 1000);
 
-  // Screenshot at configured interval
-  const scheduleScreenshot = () => {
-    screenshotInterval = setTimeout(() => {
-      takeScreenshot();
-      scheduleScreenshot();
-    }, getScreenshotIntervalMs());
-  };
-  scheduleScreenshot();
+  // Take first screenshot after 5 seconds, then at configured interval
+  setTimeout(() => {
+    takeScreenshot();
+    const scheduleScreenshot = () => {
+      screenshotInterval = setTimeout(() => {
+        takeScreenshot();
+        scheduleScreenshot();
+      }, getScreenshotIntervalMs());
+    };
+    scheduleScreenshot();
+  }, 5000);
 
-  console.log("Sync started");
+  console.log("[sync] Sync started — first screenshot in 5 seconds");
 }
 
 export function stopSync() {
