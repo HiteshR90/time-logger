@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import {
-  Monitor, Clock, UserPlus, Building2, FolderKanban, Users,
+  Monitor, Clock, UserPlus, Building2, FolderKanban,
   FileText, Settings, BarChart3, LayoutDashboard, LogOut, ChevronDown,
 } from "lucide-react";
 import { useState } from "react";

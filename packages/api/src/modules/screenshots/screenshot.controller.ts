@@ -8,6 +8,7 @@ export async function getPresignedUrl(req: Request, res: Response, next: NextFun
   try {
     const result = await screenshotService.getPresignedUploadUrl(
       req.user!.userId,
+      req.user!.orgId,
       req.body.filename,
     );
     res.json({ success: true, data: result });

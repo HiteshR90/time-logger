@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { formatDuration } from "@time-tracker/shared";
 
 export default function TimesheetsPage() {
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const canApprove = hasPermission("timesheets.approve");
   const [selectedUser, setSelectedUser] = useState("");
   const [from, setFrom] = useState(() => {

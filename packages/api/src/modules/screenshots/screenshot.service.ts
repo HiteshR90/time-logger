@@ -3,13 +3,13 @@ import { AppError } from "../../middleware/errorHandler";
 import * as s3Service from "../../services/s3";
 import type { ScreenshotConfirmInput } from "@time-tracker/shared";
 
-export async function getPresignedUploadUrl(userId: string, filename: string) {
+export async function getPresignedUploadUrl(userId: string, orgId: string, filename: string) {
   const date = new Date();
   const datePath = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
   const key = `screenshots/${datePath}/${userId}/${Date.now()}-${filename}`;
 
-  const url = await s3Service.generatePresignedUploadUrl(key);
-  return { uploadUrl: url, s3Key: key };
+  const { url, fullKey } = await s3Service.generatePresignedUploadUrl(key, "image/jpeg", 300, orgId);
+  return { uploadUrl: url, s3Key: fullKey };
 }
 
 export async function confirmUpload(input: ScreenshotConfirmInput) {
