@@ -5,7 +5,7 @@ directories:
   buildResources: build
 files:
   - out/**/*
-  - "!node_modules"
+  - package.json
 extraMetadata:
   main: out/main/main.js
 asar: true
@@ -14,17 +14,14 @@ mac:
   category: public.app-category.productivity
   target:
     - dmg
-    - zip
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
 win:
   target:
     - nsis
-    - portable
 linux:
   target:
     - AppImage
-    - deb
 publish:
   provider: generic
   url: https://releases.timetracker.app
