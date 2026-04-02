@@ -11,20 +11,20 @@ clientRoutes.get("/:id", requireAuth, clientController.get);
 clientRoutes.post(
   "/",
   requireAuth,
-  requireRole("owner"),
+  requireRole("owner", "manager"),
   validate(CreateClientSchema),
   clientController.create,
 );
 clientRoutes.patch(
   "/:id",
   requireAuth,
-  requireRole("owner"),
+  requireRole("owner", "manager"),
   validate(UpdateClientSchema),
   clientController.update,
 );
 clientRoutes.delete(
   "/:id",
   requireAuth,
-  requireRole("owner"),
+  requireRole("owner", "manager"),
   clientController.remove,
 );
