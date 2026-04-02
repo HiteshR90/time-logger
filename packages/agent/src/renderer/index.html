@@ -156,18 +156,20 @@
       }
 
       async function loadTodayStats() {
+        if (!currentUser) return;
         try {
           const today = new Date().toISOString().split('T')[0];
           const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-          const result = await apiCall(`/timesheets?from=${today}T00:00:00Z&limit=100`);
+          const uid = currentUser.id;
+          const result = await apiCall(`/timesheets?userId=${uid}&from=${today}T00:00:00Z&limit=100`);
           if (result.success) {
-            const todaySec = (result.entries || []).reduce((s, e) => s + e.durationSec, 0);
-            $('today-total').textContent = formatHM(todaySec);
+            const entries = result.data?.entries || [];
+            $('today-total').textContent = formatHM(entries.reduce((s, e) => s + e.durationSec, 0));
           }
-          const weekResult = await apiCall(`/timesheets?from=${weekAgo}T00:00:00Z&limit=100`);
+          const weekResult = await apiCall(`/timesheets?userId=${uid}&from=${weekAgo}T00:00:00Z&limit=100`);
           if (weekResult.success) {
-            const weekSec = (weekResult.entries || []).reduce((s, e) => s + e.durationSec, 0);
-            $('week-total').textContent = formatHM(weekSec);
+            const entries = weekResult.data?.entries || [];
+            $('week-total').textContent = formatHM(entries.reduce((s, e) => s + e.durationSec, 0));
           }
         } catch {}
       }
