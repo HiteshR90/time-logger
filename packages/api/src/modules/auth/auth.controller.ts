@@ -56,14 +56,20 @@ export async function me(req: Request, res: Response, next: NextFunction) {
 
     let permissions: Record<string, boolean> = {};
     let roleName = user.role;
-    if (user.roleId) {
-      const role = await prisma.role.findFirst({ where: { id: user.roleId } });
-      if (role) {
-        roleName = role.name;
-        permissions = role.isSystem && role.name === "owner"
-          ? { __owner: true }
-          : (role.permissions as Record<string, boolean>) || {};
-      }
+
+    // Try loading from roleId first, then fall back to matching role name
+    const role = user.roleId
+      ? await prisma.role.findFirst({ where: { id: user.roleId } })
+      : await prisma.role.findFirst({ where: { orgId: req.user!.orgId, name: user.role } });
+
+    if (role) {
+      roleName = role.name;
+      permissions = role.isSystem && role.name === "owner"
+        ? { __owner: true }
+        : (role.permissions as Record<string, boolean>) || {};
+    } else if (user.role === "owner") {
+      // Ultimate fallback for owner
+      permissions = { __owner: true };
     }
 
     res.json({ success: true, data: { user: { ...user, roleName }, permissions } });
