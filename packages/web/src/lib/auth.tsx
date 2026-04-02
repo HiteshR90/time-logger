@@ -11,6 +11,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  permissions: Record<string, boolean>;
+  hasPermission: (perm: string) => boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (orgName: string, email: string, password: string, name: string) => Promise<void>;
@@ -21,12 +23,23 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+
+  const hasPermission = (perm: string) => {
+    if (permissions.__owner) return true;
+    return permissions[perm] === true;
+  };
 
   useEffect(() => {
     const token = getAccessToken();
     if (token) {
-      apiFetch("/organizations/me")
+      Promise.all([
+        apiFetch("/organizations/me"),
+        apiFetch("/auth/me").then((data) => {
+          setPermissions(data.permissions || {});
+        }),
+      ])
         .then(() => {
           const stored = localStorage.getItem("user");
           if (stored) setUser(JSON.parse(stored));
@@ -83,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, permissions, hasPermission, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

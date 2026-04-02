@@ -46,7 +46,10 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-2">Settings</h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold">Settings</h1>
+        <a href="/settings/roles" className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium">Roles & Permissions</a>
+      </div>
       <p className="text-sm text-slate-400 mb-6">Organization defaults. Override per department (Teams) or per member (Members).</p>
 
       <div className="max-w-lg space-y-6">
