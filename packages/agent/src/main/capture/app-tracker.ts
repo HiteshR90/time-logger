@@ -64,11 +64,10 @@ async function getActiveWindow(): Promise<{ app: string; title: string } | null>
     const { stdout, stderr } = await execFileAsync(binaryPath, [], { timeout: 3000 });
     if (stderr) console.log("[app-tracker] stderr:", stderr);
     const data = JSON.parse(stdout);
-    if (data && data.app) {
-      return { app: data.app, title: data.title || "" };
+    const appName = data.owner?.name || data.app;
+    if (appName) {
+      return { app: appName, title: data.title || "" };
     }
-    // Binary returned data but no app — likely permission issue
-    console.log("[app-tracker] Binary returned:", stdout.substring(0, 100));
   } catch (err: any) {
     console.log("[app-tracker] Error:", err.message || err.code || String(err));
     if (err.killed) {
