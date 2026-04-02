@@ -20,17 +20,19 @@ export async function generateInvoice(orgId: string, input: GenerateInvoiceInput
   const projectIds = client.projects.map((p) => p.id);
   if (projectIds.length === 0) throw new AppError(400, "Client has no projects");
 
-  // Check for duplicate: same client + exact same date range
+  // Check for duplicate: same client + overlapping date range
   const existing = await prisma.invoice.findFirst({
     where: {
       orgId,
       clientId: input.clientId,
-      fromDate: new Date(input.fromDate),
-      toDate: new Date(input.toDate),
+      fromDate: { lte: new Date(input.toDate) },
+      toDate: { gte: new Date(input.fromDate) },
     },
   });
   if (existing) {
-    throw new AppError(409, `Invoice "${existing.invoiceNumber}" already exists for this client and exact period. Delete it first or choose different dates.`);
+    const existFrom = new Date(existing.fromDate).toLocaleDateString();
+    const existTo = new Date(existing.toDate).toLocaleDateString();
+    throw new AppError(409, `Invoice "${existing.invoiceNumber}" (${existFrom} - ${existTo}) already covers this period. Delete it first or choose non-overlapping dates.`);
   }
 
   // Ensure toDate includes the entire end day
