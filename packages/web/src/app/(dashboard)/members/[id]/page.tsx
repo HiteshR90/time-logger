@@ -252,18 +252,30 @@ export default function MemberEditPage() {
           )}
 
           <div className="space-y-2">
-            {member.projectMembers?.length > 0 ? member.projectMembers.map((pm: any) => (
-              <div key={pm.project.id} className="flex items-center justify-between px-3 py-2 bg-slate-900/50 rounded-lg">
-                <div>
-                  <span className="text-sm">{pm.project.name}</span>
-                  {pm.hourlyRate > 0 && <span className="text-xs text-slate-400 ml-2">${pm.hourlyRate}/hr</span>}
+            {member.projectMembers?.length > 0 ? member.projectMembers.map((pm: any) => {
+              const proj = projects?.find((p: any) => p.id === pm.project.id);
+              return (
+                <div key={pm.project.id} className="flex items-center justify-between px-3 py-2 bg-slate-900/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <a href={`/projects/${pm.project.id}`}
+                      className="text-sm text-blue-400 hover:underline">{pm.project.name}</a>
+                    {pm.hourlyRate > 0 && <span className="text-xs text-slate-400">${pm.hourlyRate}/hr</span>}
+                    <span className="text-xs text-slate-600">{proj?.budgetType || ""}</span>
+                    {proj?.client?.name && <span className="text-xs text-slate-500">• {proj.client.name}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a href={`/projects/${pm.project.id}`}
+                      className="p-1 hover:bg-slate-700 rounded text-xs text-slate-400" title="Edit project settings">
+                      Settings
+                    </a>
+                    <button onClick={() => removeFromProjectMutation.mutate(pm.project.id)}
+                      className="p-1 hover:bg-red-900/30 rounded" title="Remove from project">
+                      <Trash2 size={14} className="text-red-400" />
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => removeFromProjectMutation.mutate(pm.project.id)}
-                  className="p-1 hover:bg-red-900/30 rounded" title="Remove from project">
-                  <Trash2 size={14} className="text-red-400" />
-                </button>
-              </div>
-            )) : (
+              );
+            }) : (
               <p className="text-xs text-slate-500 text-center py-4">Not assigned to any projects</p>
             )}
           </div>
