@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 
+const CURRENCIES = ["USD", "EUR", "GBP", "INR", "AED", "CAD", "AUD", "SGD", "JPY"];
+
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { data: org } = useQuery({
@@ -12,6 +14,7 @@ export default function SettingsPage() {
 
   const [screenshotInterval, setScreenshotInterval] = useState("5");
   const [idleTimeout, setIdleTimeout] = useState("5");
+  const [salaryCurrency, setSalaryCurrency] = useState("USD");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -19,6 +22,7 @@ export default function SettingsPage() {
       const s = org.settings as any;
       setScreenshotInterval(String(s.screenshotIntervalMin ?? 5));
       setIdleTimeout(String(s.idleTimeoutMin ?? 5));
+      setSalaryCurrency(s.defaultCurrency ?? "USD");
     }
   }, [org]);
 
@@ -36,6 +40,7 @@ export default function SettingsPage() {
     saveMutation.mutate({
       screenshotIntervalMin: Number(screenshotInterval),
       idleTimeoutMin: Number(idleTimeout),
+      defaultCurrency: salaryCurrency,
     });
   };
 
@@ -69,8 +74,18 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h2 className="text-lg font-semibold mb-2">Billing</h2>
-          <p className="text-sm text-slate-400">Currency and tax rate are set per client on the Clients page. Each client can have their own currency (USD, INR, AED, etc.) and tax rate.</p>
+          <h2 className="text-lg font-semibold mb-4">Salary & Billing</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-1">Employee Salary Currency</label>
+              <select value={salaryCurrency} onChange={(e) => setSalaryCurrency(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm">
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p className="text-xs text-slate-500 mt-1">Used for employee salary display on the Members page.</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-4">Client billing currency and tax rate are set per client on the Clients page.</p>
         </div>
 
         <button onClick={handleSave} disabled={saveMutation.isPending}
