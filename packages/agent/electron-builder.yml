@@ -2,13 +2,21 @@ appId: com.timetracker.agent
 productName: TimeTracker
 directories:
   output: release
+  buildResources: build
 files:
-  - dist/**/*
+  - out/**/*
+  - "!node_modules"
+extraMetadata:
+  main: out/main/main.js
+asar: true
+npmRebuild: false
 mac:
   category: public.app-category.productivity
   target:
     - dmg
     - zip
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
 win:
   target:
     - nsis
