@@ -49,7 +49,7 @@ export async function remove(req: Request, res: Response, next: NextFunction) {
 
 export async function addMember(req: Request, res: Response, next: NextFunction) {
   try {
-    const member = await projectService.addMember(req.user!.orgId, getParam(req, "id"), req.body);
+    const member = await projectService.addMember(req.user!.orgId, getParam(req, "id"), req.user!.userId, req.user!.role, req.body);
     res.status(201).json({ success: true, data: member });
   } catch (err) {
     next(err);
@@ -58,7 +58,7 @@ export async function addMember(req: Request, res: Response, next: NextFunction)
 
 export async function removeMember(req: Request, res: Response, next: NextFunction) {
   try {
-    await projectService.removeMember(req.user!.orgId, getParam(req, "id"), getParam(req, "userId"));
+    await projectService.removeMember(req.user!.orgId, getParam(req, "id"), req.user!.userId, req.user!.role, getParam(req, "userId"));
     res.json({ success: true, data: null });
   } catch (err) {
     next(err);

@@ -68,12 +68,24 @@ export async function deleteProject(orgId: string, id: string) {
 export async function addMember(
   orgId: string,
   projectId: string,
+  callerId: string,
+  callerRole: string,
   input: AddProjectMemberInput,
 ) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, orgId },
   });
   if (!project) throw new AppError(404, "Project not found");
+
+  // Managers can only add members to projects they are part of
+  if (callerRole === "manager") {
+    const callerMembership = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: callerId } },
+    });
+    if (!callerMembership) {
+      throw new AppError(403, "You can only add members to projects you are part of");
+    }
+  }
 
   const user = await prisma.user.findFirst({
     where: { id: input.userId, orgId },
@@ -98,12 +110,24 @@ export async function addMember(
 export async function removeMember(
   orgId: string,
   projectId: string,
+  callerId: string,
+  callerRole: string,
   userId: string,
 ) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, orgId },
   });
   if (!project) throw new AppError(404, "Project not found");
+
+  // Managers can only remove members from projects they are part of
+  if (callerRole === "manager") {
+    const callerMembership = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId: callerId } },
+    });
+    if (!callerMembership) {
+      throw new AppError(403, "You can only manage members of projects you are part of");
+    }
+  }
 
   return prisma.projectMember.delete({
     where: { projectId_userId: { projectId, userId } },
