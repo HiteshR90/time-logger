@@ -50,6 +50,7 @@ export async function getUser(orgId: string, userId: string) {
 export async function updateUser(
   orgId: string,
   userId: string,
+  callerRole: string,
   data: {
     role?: string;
     departmentId?: string | null;
@@ -60,6 +61,22 @@ export async function updateUser(
 ) {
   const user = await prisma.user.findFirst({ where: { id: userId, orgId } });
   if (!user) throw new AppError(404, "User not found");
+
+  // Permission checks
+  if (callerRole === "manager") {
+    // Managers can only edit employees
+    if (user.role === "owner" || user.role === "manager") {
+      throw new AppError(403, "Managers cannot edit owners or other managers");
+    }
+    // Managers cannot promote to owner
+    if (data.role === "owner") {
+      throw new AppError(403, "Managers cannot assign the owner role");
+    }
+  }
+  // Only owners can change someone's role to owner
+  if (data.role === "owner" && callerRole !== "owner") {
+    throw new AppError(403, "Only owners can assign the owner role");
+  }
 
   return prisma.user.update({
     where: { id: userId },

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth";
 import { UserPlus, Shield, ShieldCheck, Pencil, X, Clock, Mail } from "lucide-react";
 
 const SCREENSHOT_OPTIONS = [
@@ -18,7 +19,9 @@ const SCREENSHOT_OPTIONS = [
 const ALL_ROLES = ["employee", "manager", "owner"] as const;
 
 export default function MembersPage() {
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
+  const isOwner = currentUser?.role === "owner";
   const [showInvite, setShowInvite] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -49,6 +52,23 @@ export default function MembersPage() {
     queryKey: ["departments"],
     queryFn: () => apiFetch("/departments"),
   });
+
+  // Managers only see employees; owners see everyone
+  const visibleUsers = users?.filter((u: any) => {
+    if (isOwner) return true;
+    // Managers see employees + themselves
+    return u.role === "employee" || u.id === currentUser?.id;
+  }) || [];
+
+  // Can this user be edited by the current user?
+  const canEdit = (u: any) => {
+    if (u.id === currentUser?.id) return false; // Can't edit yourself
+    if (isOwner) return true; // Owner can edit anyone
+    return u.role === "employee"; // Manager can edit employees only
+  };
+
+  // Roles available for assignment
+  const assignableRoles = isOwner ? ALL_ROLES : (["employee", "manager"] as const);
 
   const inviteMutation = useMutation({
     mutationFn: (data: any) => apiFetch("/auth/invite", { method: "POST", body: JSON.stringify(data) }),
@@ -158,7 +178,7 @@ export default function MembersPage() {
             <div>
               <label className="block text-sm text-slate-400 mb-2">Roles</label>
               <div className="flex gap-4">
-                {ALL_ROLES.map((r) => (
+                {assignableRoles.map((r) => (
                   <label key={r} className="flex items-center gap-2 text-sm cursor-pointer">
                     <input type="radio" name="invRole" value={r} checked={invRole === r}
                       onChange={(e) => setInvRole(e.target.value)}
@@ -237,7 +257,7 @@ export default function MembersPage() {
             </tr>
           </thead>
           <tbody>
-            {users?.map((user: any) => (
+            {visibleUsers.map((user: any) => (
               <tr key={user.id} className="border-t border-slate-700">
                 {editingId === user.id ? (
                   <>
@@ -304,10 +324,12 @@ export default function MembersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => startEdit(user)}
-                        className="p-1 hover:bg-slate-700 rounded" title="Edit">
-                        <Pencil size={14} className="text-slate-400" />
-                      </button>
+                      {canEdit(user) && (
+                        <button onClick={() => startEdit(user)}
+                          className="p-1 hover:bg-slate-700 rounded" title="Edit">
+                          <Pencil size={14} className="text-slate-400" />
+                        </button>
+                      )}
                     </td>
                   </>
                 )}

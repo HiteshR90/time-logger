@@ -37,6 +37,7 @@ export async function updateUser(
     const user = await userService.updateUser(
       req.user!.orgId,
       getParam(req, "id"),
+      req.user!.role,
       req.body,
     );
     res.json({ success: true, data: user });
