@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, systemPreferences, shell, dialog } from "electron";
+import { app, BrowserWindow, ipcMain, systemPreferences, shell, dialog, Notification } from "electron";
 import path from "path";
 import { startInputTracking, stopInputTracking } from "./capture/input-tracker";
 import { startAppTracking, stopAppTracking, setCategoryRules } from "./capture/app-tracker";
@@ -34,6 +34,46 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+}
+
+// Reminder system — nudge user to start tracking
+let isTracking = false;
+let reminderInterval: ReturnType<typeof setInterval> | null = null;
+const REMINDER_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
+function startReminder() {
+  if (reminderInterval) return;
+  reminderInterval = setInterval(() => {
+    if (isTracking || !getAccessToken()) return; // Already tracking or not logged in
+
+    // Check if it's working hours (Mon-Fri, 8am-7pm)
+    const now = new Date();
+    const day = now.getDay();
+    const hour = now.getHours();
+    if (day === 0 || day === 6) return; // Weekend
+    if (hour < 8 || hour >= 19) return; // Outside work hours
+
+    const notification = new Notification({
+      title: "TimeTracker",
+      body: "You haven't started tracking yet. Don't forget to log your time!",
+      silent: false,
+    });
+    notification.on("click", () => {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+    notification.show();
+    console.log("[reminder] Sent tracking reminder");
+  }, REMINDER_INTERVAL_MS);
+}
+
+function stopReminder() {
+  if (reminderInterval) {
+    clearInterval(reminderInterval);
+    reminderInterval = null;
+  }
 }
 
 async function initializeTracking() {
@@ -158,6 +198,7 @@ ipcMain.handle("tracking:start", async (_e, userId: string, projectId: string) =
   configure({ userId, projectId, screenshotIntervalMin, blurScreenshots });
   await initializeTracking();
   startSync();
+  isTracking = true;
   return { success: true };
 });
 
@@ -166,6 +207,7 @@ ipcMain.handle("tracking:stop", () => {
   stopInputTracking();
   stopAppTracking();
   stopIdleDetection();
+  isTracking = false;
   return { success: true };
 });
 
@@ -176,6 +218,7 @@ app.whenReady().then(async () => {
   const refreshed = await refreshAccessToken();
   console.log("[auth] Startup refresh:", refreshed ? "success" : "no stored session");
   createWindow();
+  startReminder();
 });
 
 app.on("window-all-closed", () => {
@@ -185,6 +228,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  stopReminder();
   stopSync();
   stopInputTracking();
   stopAppTracking();
