@@ -14,18 +14,48 @@ asar: true
 asarUnpack:
   - "native_modules/**/*"
 npmRebuild: false
+
 mac:
   category: public.app-category.productivity
   target:
-    - dmg
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+
 win:
   target:
-    - nsis
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: build/icon.png
+
 linux:
   target:
-    - AppImage
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  category: Utility
+  icon: build/icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
 publish:
   provider: generic
   url: https://releases.timetracker.app

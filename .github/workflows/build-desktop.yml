@@ -1,0 +1,93 @@
+name: Build Desktop Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            arch: arm64
+          - os: macos-13
+            platform: mac
+            arch: x64
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build shared package
+        run: pnpm turbo build --filter=@time-tracker/shared
+
+      - name: Build Electron app
+        run: |
+          cd packages/agent
+          npx electron-vite build
+
+      - name: Prepare native modules (macOS/Linux)
+        if: matrix.platform != 'win'
+        run: |
+          cd packages/agent
+          bash scripts/prepare-native.sh
+
+      - name: Package for ${{ matrix.platform }} (${{ matrix.arch }})
+        run: |
+          cd packages/agent
+          npx electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --config electron-builder.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TimeTracker-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            packages/agent/release/*.dmg
+            packages/agent/release/*.zip
+            packages/agent/release/*.exe
+            packages/agent/release/*.AppImage
+            packages/agent/release/*.deb
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          draft: true
+          generate_release_notes: true
