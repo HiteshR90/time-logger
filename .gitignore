@@ -1,6 +1,12 @@
 node_modules/
 dist/
 out/
+release/
+native_modules/
+*.dmg
+*.zip
+*.blockmap
+*.AppImage
 .turbo/
 *.tsbuildinfo
 .env
